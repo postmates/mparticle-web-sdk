@@ -641,6 +641,9 @@ export default function Helpers(mpInstance) {
                                 if (
                                     Types.IdentityType.getIdentityType(
                                         identityType
+                                    ) === false &&
+                                    Types.DeviceIdTypes.getIdentityType(
+                                        identityType
                                     ) === false
                                 ) {
                                     return {

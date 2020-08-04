@@ -119,6 +119,30 @@ var IdentityType = {
     PhoneNumber3: 21,
 };
 
+var DeviceIdTypes = {
+    MicrosoftAID: 1,
+};
+
+DeviceIdTypes.getIdentityType = function(identityType) {
+    switch (identityType) {
+        case 'microsoft_aid':
+            return DeviceIdTypes.MicrosoftAID;
+        // amp_id
+        // android_aaid
+        // android_uuid
+        // fire_aid
+        // ios_idfa
+        // ios_idfv
+        // microsoft_aid
+        // microsoft_publisher_id
+        // roku_aid
+        // roku_publisher_id
+        // push_token
+        default:
+            return false;
+    }
+};
+
 IdentityType.isValid = function(identityType) {
     if (typeof identityType === 'number') {
         for (var prop in IdentityType) {
@@ -249,6 +273,8 @@ IdentityType.getIdentityName = function(identityType) {
             return 'phone_number_2';
         case IdentityType.PhoneNumber3:
             return 'phone_number_3';
+        case IdentityType.MicrosoftAID:
+            return 'microsoft_aid';
     }
 };
 
@@ -362,6 +388,7 @@ export default {
     EventType: EventType,
     CommerceEventType: CommerceEventType,
     IdentityType: IdentityType,
+    DeviceIdTypes: DeviceIdTypes,
     ProfileMessageType: ProfileMessageType,
     ApplicationTransitionType: ApplicationTransitionType,
     ProductActionType: ProductActionType,

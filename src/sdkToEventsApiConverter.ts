@@ -59,6 +59,7 @@ export function convertEvents(
             platform: EventsApi.DeviceInformationPlatformEnum.web,
             screen_width: window.screen.width,
             screen_height: window.screen.height,
+            // microsoft_advertising_id: 'abcdefg',
         },
         user_attributes: lastEvent.UserAttributes,
         user_identities: convertUserIdentities(lastEvent.UserIdentities),

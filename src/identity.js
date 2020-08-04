@@ -21,6 +21,16 @@ export default function Identity(mpInstance) {
         }
     };
 
+    this.parseDeviceIds = function(identityApiData) {
+        var deviceIds = {};
+        for (var identity in identityApiData) {
+            if (Types.DeviceIdTypes.getIdentityType(identity)) {
+                deviceIds[identity] = identityApiData[identity];
+            }
+        }
+        return deviceIds;
+    };
+
     this.IdentityRequest = {
         createKnownIdentities: function(identityApiData, deviceId) {
             var identitiesResult = {};
@@ -158,7 +168,7 @@ export default function Identity(mpInstance) {
             return identityChanges;
         },
 
-        // takes 2 UI objects keyed by name, combines them, returns them keyed by type
+        // takes 2 UI objects keyed by name, combines them, returns them keyed by type, removing deviceIds
         combineUserIdentities: function(previousUIByName, newUIByName) {
             var combinedUIByType = {};
 
@@ -169,10 +179,9 @@ export default function Identity(mpInstance) {
 
             for (var key in combinedUIByName) {
                 var type = Types.IdentityType.getIdentityType(key);
-                // this check removes anything that is not whitelisted as an identity type
+                // this check removes anything that is not whitelisted as an identity type, including deviceIds
                 if (type !== false && type >= 0) {
-                    combinedUIByType[Types.IdentityType.getIdentityType(key)] =
-                        combinedUIByName[key];
+                    combinedUIByType[type] = combinedUIByName[key];
                 }
             }
 
@@ -260,6 +269,10 @@ export default function Identity(mpInstance) {
                     mpid
                 );
 
+                mpInstance._Store.deviceInfo = self.parseDeviceIds(
+                    identityApiData
+                );
+
                 if (mpInstance._Helpers.canLog()) {
                     if (mpInstance._Store.webviewBridgeEnabled) {
                         mpInstance._NativeSdkHelpers.sendToNative(
@@ -333,6 +346,10 @@ export default function Identity(mpInstance) {
                         mpInstance._Store.context,
                         mpid
                     );
+
+                mpInstance._Store.deviceInfo = self.parseDeviceIds(
+                    identityApiData
+                );
 
                 if (mpInstance._Helpers.canLog()) {
                     if (mpInstance._Store.webviewBridgeEnabled) {
@@ -422,6 +439,10 @@ export default function Identity(mpInstance) {
                     mpid
                 );
 
+                mpInstance._Store.deviceInfo = self.parseDeviceIds(
+                    identityApiData
+                );
+
                 if (mpInstance._Helpers.canLog()) {
                     if (mpInstance._Store.webviewBridgeEnabled) {
                         mpInstance._NativeSdkHelpers.sendToNative(
@@ -497,6 +518,10 @@ export default function Identity(mpInstance) {
                     Constants.sdkVendor,
                     Constants.sdkVersion,
                     mpInstance._Store.context
+                );
+
+                mpInstance._Store.deviceInfo = self.parseDeviceIds(
+                    identityApiData
                 );
 
                 if (mpInstance._Helpers.canLog()) {

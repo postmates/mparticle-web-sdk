@@ -3011,6 +3011,46 @@ describe('identity', function() {
         done();
     });
 
+    it.only('should log device info properly', function(done) {
+        mParticle.config.flags = {
+            eventsV3: '100',
+            eventBatchingIntervalMillis: 0,
+        }
+
+        window.fetchMock.post(
+            'https://jssdks.mparticle.com/v3/JS/test_key/events',
+            200
+        );
+
+        var identityAPIData = {
+            userIdentities: {
+                email: 'rob@gmail.com',
+                microsoft_aid: 'abc'
+            },
+        };
+
+        mParticle.init(apiKey, window.mParticle.config);
+
+        mockServer.respondWith(urls.login, [
+            200,
+            {},
+            JSON.stringify({ mpid: 'newMPID', is_logged_in: false }),
+        ]);
+
+        mParticle.Identity.login(identityAPIData);
+        var data = getIdentityEvent(mockServer.requests, 'login');
+
+        data.known_identities.microsoft_aid.should.equal('abc');
+        data.known_identities.email.should.equal('rob@gmail.com');
+        data.known_identities.device_application_stamp.should.be.ok();
+        
+        mParticle.logEvent('test');
+        var batch = JSON.parse(window.fetchMock.lastOptions().body);
+        batch.user_identities.should.have.property('email', 'rob@gmail.com')
+        
+        done();
+    });
+
     describe('Deprecate Cart', function() {
         afterEach(function() {
             sinon.restore();
