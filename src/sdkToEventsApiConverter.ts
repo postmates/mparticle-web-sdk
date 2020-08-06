@@ -59,13 +59,22 @@ export function convertEvents(
             platform: EventsApi.DeviceInformationPlatformEnum.web,
             screen_width: window.screen.width,
             screen_height: window.screen.height,
-            // microsoft_advertising_id: 'abcdefg',
         },
         user_attributes: lastEvent.UserAttributes,
         user_identities: convertUserIdentities(lastEvent.UserIdentities),
         consent_state: convertConsentState(lastEvent.ConsentState),
         integration_attributes: lastEvent.IntegrationAttributes,
     };
+
+    if (
+        mpInstance._Store &&
+        mpInstance._Store.deviceInfo &&
+        Object.keys(mpInstance._Store.deviceInfo).length > 0
+    ) {
+        for (var id in mpInstance._Store.deviceInfo) {
+            upload.device_info[id] = mpInstance._Store.deviceInfo[id];
+        }
+    }
 
     if (lastEvent.DataPlan && lastEvent.DataPlan.PlanId) {
         upload.context = {

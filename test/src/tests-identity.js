@@ -3011,7 +3011,7 @@ describe('identity', function() {
         done();
     });
 
-    it.only('should log device info properly', function(done) {
+    it('should log device info on identity call, and batch properly, but not on identity call', function(done) {
         mParticle.config.flags = {
             eventsV3: '100',
             eventBatchingIntervalMillis: 0,
@@ -3045,9 +3045,13 @@ describe('identity', function() {
         data.known_identities.device_application_stamp.should.be.ok();
         
         mParticle.logEvent('test');
+
         var batch = JSON.parse(window.fetchMock.lastOptions().body);
-        batch.user_identities.should.have.property('email', 'rob@gmail.com')
-        
+
+        batch.user_identities.should.have.property('email', 'rob@gmail.com');
+        batch.user_identities.should.not.have.property('microsoft_aid');
+        batch.device_info.should.have.property('microsoft_aid');
+
         done();
     });
 

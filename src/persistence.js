@@ -1,5 +1,6 @@
 import Constants from './constants';
 import Polyfill from './polyfill';
+import Types from './types';
 
 var Base64 = Polyfill.Base64,
     Messages = Constants.Messages,
@@ -169,8 +170,46 @@ export default function _Persistence(mpInstance) {
                 // Set MPID first, then change object to match MPID data
                 if (currentMPID) {
                     mpInstance._Store.mpid = currentMPID;
+                    mpInstance._Store.deviceInfo = {};
+                    if (
+                        mpInstance._Store.mpid &&
+                        mpInstance._Helpers.isObject(
+                            obj[mpInstance._Store.mpid]
+                        ) &&
+                        mpInstance._Helpers.isObject(
+                            obj[mpInstance._Store.mpid].did
+                        ) &&
+                        Object.keys(obj[mpInstance._Store.mpid].did).length
+                    ) {
+                        for (var type in obj[mpInstance._Store.mpid].did) {
+                            mpInstance._Store.deviceInfo[
+                                Types.DeviceIdTypes.getName(
+                                    mpInstance._Helpers.parseNumber(type)
+                                )
+                            ] = obj[mpInstance._Store.mpid].did[type];
+                        }
+                    }
                 } else {
                     mpInstance._Store.mpid = obj.cu || 0;
+                    mpInstance._Store.deviceInfo = {};
+                    if (
+                        mpInstance._Store.mpid &&
+                        mpInstance._Helpers.isObject(
+                            obj[mpInstance._Store.mpid]
+                        ) &&
+                        mpInstance._Helpers.isObject(
+                            obj[mpInstance._Store.mpid].did
+                        ) &&
+                        Object.keys(obj[mpInstance._Store.mpid].did).length
+                    ) {
+                        for (type in obj[mpInstance._Store.mpid].did) {
+                            mpInstance._Store.deviceInfo[
+                                Types.DeviceIdTypes.getName(
+                                    mpInstance._Helpers.parseNumber(type)
+                                )
+                            ] = obj[mpInstance._Store.mpid].did[type];
+                        }
+                    }
                 }
 
                 obj.gs = obj.gs || {};
@@ -214,12 +253,11 @@ export default function _Persistence(mpInstance) {
                 } else {
                     mpInstance._Store.sessionStartDate = new Date();
                 }
-
-                if (currentMPID) {
-                    obj = obj[currentMPID];
-                } else {
-                    obj = obj[obj.cu];
-                }
+                // if (currentMPID) {
+                //     obj = obj[currentMPID];
+                // } else {
+                //     obj = obj[obj.cu];
+                // }
             }
         } catch (e) {
             mpInstance.Logger.error(Messages.ErrorMessages.CookieParseError);
@@ -932,6 +970,7 @@ export default function _Persistence(mpInstance) {
             );
         }
     };
+
     this.saveUserIdentitiesToPersistence = function(mpid, userIdentities) {
         if (userIdentities) {
             var persistence = self.getPersistence();
@@ -941,6 +980,27 @@ export default function _Persistence(mpInstance) {
                 } else {
                     persistence[mpid] = {
                         ui: userIdentities,
+                    };
+                }
+                self.savePersistence(persistence);
+            }
+        }
+    };
+
+    this.saveDeviceIdentitiesToPersistence = function(mpid, deviceIdentities) {
+        if (deviceIdentities) {
+            var minifiedDeviceIds = {};
+            for (var longId in deviceIdentities) {
+                minifiedDeviceIds[Types.DeviceIdTypes.getIdentityType(longId)] =
+                    deviceIdentities[longId];
+            }
+            var persistence = self.getPersistence();
+            if (persistence) {
+                if (persistence[mpid]) {
+                    persistence[mpid].did = minifiedDeviceIds;
+                } else {
+                    persistence[mpid] = {
+                        did: minifiedDeviceIds,
                     };
                 }
                 self.savePersistence(persistence);

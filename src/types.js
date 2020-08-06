@@ -120,13 +120,33 @@ var IdentityType = {
 };
 
 var DeviceIdTypes = {
-    MicrosoftAID: 1,
+    MicrosoftAID: 19,
 };
 
-DeviceIdTypes.getIdentityType = function(identityType) {
-    switch (identityType) {
+DeviceIdTypes.getIdentityType = function(identityName) {
+    switch (identityName) {
         case 'microsoft_aid':
             return DeviceIdTypes.MicrosoftAID;
+        // amp_id
+        // android_aaid
+        // android_uuid
+        // fire_aid
+        // ios_idfa
+        // ios_idfv
+        // microsoft_aid
+        // microsoft_publisher_id
+        // roku_aid
+        // roku_publisher_id
+        // push_token
+        default:
+            return false;
+    }
+};
+
+DeviceIdTypes.getName = function(identityType) {
+    switch (identityType) {
+        case DeviceIdTypes.MicrosoftAID:
+            return 'microsoft_aid';
         // amp_id
         // android_aaid
         // android_uuid

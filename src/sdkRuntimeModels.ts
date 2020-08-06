@@ -165,7 +165,23 @@ export interface SDKStoreApi {
     SDKConfig: SDKConfigApi;
     sessionId?: string;
     deviceId?: string;
+    deviceInfo?: DeviceInfoAPI
 }
+
+export interface DeviceInfoAPI {
+    amp_id?: string;
+    android_aaid?: string;
+    android_uuid?: string;
+    fire_aid?: string;
+    ios_idfa?: string;
+    ios_idfv?: string;
+    microsoft_aid?: string;
+    microsoft_publisher_id?: string;
+    roku_aid?: string;
+    roku_publisher_id?: string;
+    push_token?: string;
+}
+
 
 export interface SDKConfigApi {
     v3SecureServiceUrl?: string;

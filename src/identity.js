@@ -21,11 +21,11 @@ export default function Identity(mpInstance) {
         }
     };
 
-    this.parseDeviceIds = function(identityApiData) {
+    this.parseDeviceIds = function(identities) {
         var deviceIds = {};
-        for (var identity in identityApiData) {
+        for (var identity in identities) {
             if (Types.DeviceIdTypes.getIdentityType(identity)) {
-                deviceIds[identity] = identityApiData[identity];
+                deviceIds[identity] = identities[identity];
             }
         }
         return deviceIds;
@@ -269,9 +269,11 @@ export default function Identity(mpInstance) {
                     mpid
                 );
 
-                mpInstance._Store.deviceInfo = self.parseDeviceIds(
-                    identityApiData
-                );
+                if (identityApiData && identityApiData.userIdentities) {
+                    mpInstance._Store.deviceInfo = self.parseDeviceIds(
+                        identityApiData.userIdentities
+                    );
+                }
 
                 if (mpInstance._Helpers.canLog()) {
                     if (mpInstance._Store.webviewBridgeEnabled) {
@@ -347,9 +349,11 @@ export default function Identity(mpInstance) {
                         mpid
                     );
 
-                mpInstance._Store.deviceInfo = self.parseDeviceIds(
-                    identityApiData
-                );
+                if (identityApiData && identityApiData.userIdentities) {
+                    mpInstance._Store.deviceInfo = self.parseDeviceIds(
+                        identityApiData.userIdentities
+                    );
+                }
 
                 if (mpInstance._Helpers.canLog()) {
                     if (mpInstance._Store.webviewBridgeEnabled) {
@@ -439,9 +443,11 @@ export default function Identity(mpInstance) {
                     mpid
                 );
 
-                mpInstance._Store.deviceInfo = self.parseDeviceIds(
-                    identityApiData
-                );
+                if (identityApiData && identityApiData.userIdentities) {
+                    mpInstance._Store.deviceInfo = self.parseDeviceIds(
+                        identityApiData.userIdentities
+                    );
+                }
 
                 if (mpInstance._Helpers.canLog()) {
                     if (mpInstance._Store.webviewBridgeEnabled) {
@@ -520,9 +526,11 @@ export default function Identity(mpInstance) {
                     mpInstance._Store.context
                 );
 
-                mpInstance._Store.deviceInfo = self.parseDeviceIds(
-                    identityApiData
-                );
+                if (identityApiData && identityApiData.userIdentities) {
+                    mpInstance._Store.deviceInfo = self.parseDeviceIds(
+                        identityApiData.userIdentities
+                    );
+                }
 
                 if (mpInstance._Helpers.canLog()) {
                     if (mpInstance._Store.webviewBridgeEnabled) {
@@ -1599,6 +1607,12 @@ export default function Identity(mpInstance) {
                         identityApiResult.mpid,
                         newIdentitiesByType
                     );
+
+                    mpInstance._Persistence.saveDeviceIdentitiesToPersistence(
+                        identityApiResult.mpid,
+                        mpInstance._Store.deviceInfo
+                    );
+
                     mpInstance._Persistence.update();
 
                     mpInstance._Persistence.findPrevCookiesBasedOnUI(
