@@ -112,6 +112,7 @@ export interface SDKProduct {
 }
 
 export interface MParticleWebSDK {
+    addForwarder(mockForwarder: any);
     Identity: SDKIdentityApi;
     Logger: SDKLoggerApi;
     _Store: SDKStoreApi;
@@ -131,8 +132,10 @@ export interface MParticleWebSDK {
 
 export interface SDKConfig {
     isDevelopmentMode?: boolean;
+    blockingDataPlan: any;
     appVersion?: string;
     flags?: { [key: string]: string | number };
+    kitConfigs: any;
     appName?: string;
     logLevel?: string;
     sessionTimeout?: number;
