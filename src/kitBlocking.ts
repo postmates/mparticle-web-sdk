@@ -1,11 +1,8 @@
 import { convertEvent } from './sdkToEventsApiConverter';
 import { SDKEvent } from './sdkRuntimeModels';
-import Types from './types';
 import { BaseEvent, EventTypeEnum } from '@mparticle/event-models';
 
-import {
-    DataPlanPoint
-} from '@mparticle/data-planning-models';
+import { DataPlanPoint } from '@mparticle/data-planning-models';
 
 // TODO: Why does this not build when importing from @mparticle/data-planning-models?!
 var DataPlanMatchType = {
@@ -42,21 +39,21 @@ var DataPlanMatchType = {
 // but modified to only include commerce events, custom events, screen views, and removes validation
 
 export default class KitBlocker {
-    dataPlanMatchLookups = {};
+    dataPlanMatchLookups: { [key: string]: {} } = {};
     blockEvents: Boolean = false;
     blockEventAttributes: Boolean = false;
     blockUserAttributes: Boolean = false;
     blockUserIdentities: Boolean = false;
 
     constructor(dataPlan: any) {
-        this.blockEvents = dataPlan.dtpn.blok.ev;
-        this.blockEventAttributes = dataPlan.dtpn.blok.ea;
-        this.blockUserAttributes = dataPlan.dtpn.blok.ua;
-        this.blockUserIdentities = dataPlan.dtpn.blok.ui;
+        this.blockEvents = dataPlan?.document?.dtpn?.blok?.ev;
+        this.blockEventAttributes = dataPlan?.document?.dtpn?.blok?.ea;
+        this.blockUserAttributes = dataPlan?.document?.dtpn?.blok?.ua;
+        this.blockUserIdentities = dataPlan?.document?.dtpn?.blok?.ui;
 
-        const dataPoints = dataPlan?.dtpn?.vers?.version_document?.data_points
-        
-        if (dataPoints.length > 0) {
+        const dataPoints = dataPlan?.document?.dtpn?.vers?.version_document?.data_points
+
+        if (dataPoints && dataPoints.length > 0) {
             dataPoints.forEach(point => {
                 this.addToMatchLookups(point);
             });
@@ -72,13 +69,13 @@ export default class KitBlocker {
             return;
         }
 
-        const matchKey = this.generateMatchKey(point.match);
-        const properties = this.getProperties(point.match.type, point.validator)
+        const matchKey: string = this.generateMatchKey(point.match);
+        const properties: null | Boolean | {[key: string]: true}  = this.getProperties(point.match.type, point.validator)
 
         this.dataPlanMatchLookups[matchKey] = properties;
     }
 
-    generateMatchKey(match): string {
+    generateMatchKey(match): string | null {
         switch (match.type) {
             case DataPlanMatchType.CustomEvent:
                 const customEventCriteria = match.criteria;
@@ -106,7 +103,6 @@ export default class KitBlocker {
                 return [match.type as string, promoActionMatch.action].join(':');
 
             case DataPlanMatchType.ProductImpression:
-                debugger;
                 const productImpressionActionMatch = match.criteria;
                 return [match.type as string, productImpressionActionMatch.action].join(':');
 
@@ -115,11 +111,11 @@ export default class KitBlocker {
                 return [match.type].join(':');
 
             default:
-                return 'unknown';
+                return null;
         }
     }
 
-    getProperties(type, validator) {
+    getProperties(type, validator): Boolean | {[key: string]: true} | null {
         switch (type) {
             case DataPlanMatchType.CustomEvent:
             case DataPlanMatchType.ScreenView:
@@ -154,7 +150,7 @@ export default class KitBlocker {
                     return properties;
                 }
             default:
-                return 'unknown';
+                return null;
         }
     }
 
@@ -213,7 +209,7 @@ export default class KitBlocker {
 
     mutateEvent(event: SDKEvent): SDKEvent {
         let baseEvent: BaseEvent = convertEvent(event);
-        let matchKey = this.getMatchKey(baseEvent);
+        let matchKey: string = this.getMatchKey(baseEvent);
         let matchedEvent = this.dataPlanMatchLookups[matchKey];
 
         if (this.blockEvents) {

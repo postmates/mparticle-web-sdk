@@ -5,7 +5,7 @@ import { BatchUploader } from './batchUploader';
 var HTTPCodes = Constants.HTTPCodes,
     Messages = Constants.Messages;
 
-export default function APIClient(mpInstance) {
+export default function APIClient(mpInstance, kitBlocker) {
     this.uploader = null;
     var self = this;
     this.queueEventForBatchUpload = function(event) {
@@ -102,7 +102,12 @@ export default function APIClient(mpInstance) {
         }
 
         if (event && event.EventName !== Types.MessageType.AppStateTransition) {
-            mpInstance._Forwarders.sendEventToForwarders(event);
+            if (kitBlocker) {
+                event = kitBlocker.mutateEvent(event);
+            }
+            if (event) {
+                mpInstance._Forwarders.sendEventToForwarders(event);
+            }
         }
     };
 

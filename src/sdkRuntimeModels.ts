@@ -132,7 +132,7 @@ export interface MParticleWebSDK {
 
 export interface SDKConfig {
     isDevelopmentMode?: boolean;
-    blockingDataPlan: any;
+    dataPlan: any;
     appVersion?: string;
     flags?: { [key: string]: string | number };
     kitConfigs: any;

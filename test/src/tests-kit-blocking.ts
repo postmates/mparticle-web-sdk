@@ -19,10 +19,11 @@ declare global {
         mParticle: MParticleWebSDK;
         // beforeunload: any;
         fetchMock: any;
+        MockForwarder1: any;
     }
 }
 
-describe.only('kit blocking', () => {
+describe('kit blocking', () => {
     var mockServer,
         clock
 
@@ -41,7 +42,7 @@ describe.only('kit blocking', () => {
         mockServer.reset();
     });
     
-    describe.only('batching via window.fetch', () => {
+    describe('batching via window.fetch', () => {
         beforeEach(function() {
             window.fetchMock.post(urls.eventsV3, 200);
             window.fetchMock.config.overwriteRoutes = true;
@@ -50,7 +51,9 @@ describe.only('kit blocking', () => {
                 eventsV3: '100',
                 eventBatchingIntervalMillis: 1000,
             }
-            window.mParticle.config.blockingDataPlan = dataPlan;
+            window.mParticle.config.dataPlan = {
+                document: dataPlan
+            };
             window.mParticle.config.kitConfigs = []
             
         });
@@ -62,7 +65,7 @@ describe.only('kit blocking', () => {
         });
 
         it('kitBlocker should parse data plan into dataPlanMatchLookups properly', function(done) {
-            var kitBlocker = new KitBlocker(dataPlan);
+            var kitBlocker = new KitBlocker({document: dataPlan});
             kitBlocker.dataPlanMatchLookups.should.have.property('custom_event:search:Search Event', true);
             kitBlocker.dataPlanMatchLookups.should.have.property('custom_event:location:locationEvent', {foo: true, 'foo foo': true, 'foo number': true});
             kitBlocker.dataPlanMatchLookups.should.have.property('product_action:add_to_cart', {
@@ -112,7 +115,7 @@ describe.only('kit blocking', () => {
                 Debug: true,
                 CurrencyCode: 'usd',
             }
-            var kitBlocker = new KitBlocker(dataPlan);
+            var kitBlocker = new KitBlocker({document: dataPlan});
             var mutatedEvent = kitBlocker.mutateEvent(event);
             (mutatedEvent === null).should.equal(true);
     
@@ -135,7 +138,7 @@ describe.only('kit blocking', () => {
                 Debug: true,
                 CurrencyCode: 'usd',
             }
-            var kitBlocker = new KitBlocker(dataPlan);
+            var kitBlocker = new KitBlocker({document: dataPlan});
             var mutatedEvent = kitBlocker.mutateEvent(event);
             mutatedEvent.EventAttributes.should.not.have.property('keyword2');
             mutatedEvent.EventAttributes.should.have.property('foo', 'hi');
@@ -159,7 +162,7 @@ describe.only('kit blocking', () => {
                 Debug: true,
                 CurrencyCode: 'usd',
             }
-            var kitBlocker = new KitBlocker(dataPlan);
+            var kitBlocker = new KitBlocker({document: dataPlan});
             var mutatedEvent = kitBlocker.mutateEvent(event);
             mutatedEvent.EventAttributes.should.have.property('foo', 'hi');
             mutatedEvent.EventAttributes.should.have.property('keyword2', 'test');
@@ -167,21 +170,37 @@ describe.only('kit blocking', () => {
             done();
         });
 
-           //     it.only('block a custom event to forwarder based on data plan', function(done) {
-    //         window.mParticle._resetForTests(MPConfig);
+        it('block a custom event to forwarder based on data plan', function(done) {
+            window.mParticle._resetForTests(MPConfig);
 
-    //         var mockForwarder = new MockForwarder();
-    //         window.mParticle.addForwarder(mockForwarder);
-    //         window.mParticle.config.kitConfigs.push(forwarderDefaultConfiguration('MockForwarder'));
-    //         window.mParticle.init(apiKey, window.mParticle.config);
-
-    //         debugger;
+            var mockForwarder = new MockForwarder();
+            window.mParticle.addForwarder(mockForwarder);
+            window.mParticle.config.kitConfigs.push(forwarderDefaultConfiguration('MockForwarder'));
+            window.mParticle.init(apiKey, window.mParticle.config);
     
-    //         window.mParticle.logEvent('Test Event');
+            window.mParticle.logEvent('Test Event');
 
-              // forwarder should not have a logged event
+            var event = window.MockForwarder1.instance.receivedEvent;
+            (event === null).should.equal(true);
             
-    //         done();
-    //     });
+            done();
+        });
+
+        it('block a custom event to forwarder based on data plan', function(done) {
+            window.mParticle._resetForTests(MPConfig);
+
+            var mockForwarder = new MockForwarder();
+            window.mParticle.addForwarder(mockForwarder);
+            window.mParticle.config.kitConfigs.push(forwarderDefaultConfiguration('MockForwarder'));
+            window.mParticle.config.dataPlan.document.dtpn.blok.ev = false;
+            window.mParticle.init(apiKey, window.mParticle.config);
+            
+            window.mParticle.logEvent('Test Event');
+            
+            var event = window.MockForwarder1.instance.receivedEvent;
+            event.should.have.property('EventName', 'Test Event');
+            
+            done();
+        });
     })
 }); 
