@@ -4,25 +4,14 @@ import { BaseEvent, EventTypeEnum } from '@mparticle/event-models';
 import Types from './types'
 import { DataPlanPoint } from '@mparticle/data-planning-models';
 
-// TODO: Why does this not build when importing from @mparticle/data-planning-models?!
-var DataPlanMatchType = {
-    Unknown: "unknown",
-    SessionStart: "session_start",
-    SessionEnd: "session_end",
+/*  
+    TODO: Including this as a workaround because attempting to import it from
+    @mparticle/data-planning-models directly creates a build error.
+ */
+let DataPlanMatchType = {
     ScreenView: "screen_view",
     CustomEvent: "custom_event",
-    CrashReport: "crash_report",
-    OptOut: "opt_out",
-    FirstRun: "first_run",
-    ApplicationStateTransition: "application_state_transition",
-    NetworkPerformance: "network_performance",
-    Breadcrumb: "breadcrumb",
-    Profile: "profile",
     Commerce: "commerce",
-    UserAttributeChange: "user_attribute_change",
-    UserIdentityChange: "user_identity_chagne",
-    Uninstall: "uninstall",
-    Media: "media",
     UserAttributes: "user_attributes",
     UserIdentities: "user_identities",
     ProductAction: "product_action",
@@ -30,14 +19,10 @@ var DataPlanMatchType = {
     ProductImpression: "product_impression"
 }
 
-
-// create a KitBlocker class and pass dataPlan to constructor
-// 1. generate match types for all data points to confirm event names are planned/unplanned
-// 2. ...how do we add attributes to this structure?
-
-// inspiration from https://github.com/mParticle/data-planning-node/blob/master/src/data_planning/data_plan_event_validator.ts
-// but modified to only include commerce events, custom events, screen views, and removes validation
-
+/*  
+    inspiration from https://github.com/mParticle/data-planning-node/blob/master/src/data_planning/data_plan_event_validator.ts
+    but modified to only include commerce events, custom events, screen views, and removes validation
+*/
 export default class KitBlocker {
     dataPlanMatchLookups: { [key: string]: {} } = {};
     blockEvents: Boolean = false;
@@ -127,8 +112,8 @@ export default class KitBlocker {
                     if (customAttributes.additionalProperties) {
                         return true;
                     } else {
-                        var properties = {};
-                        for (var property in customAttributes.properties) {
+                        let properties = {};
+                        for (let property in customAttributes.properties) {
                             properties[property] = true;
                         }
                         return properties;
@@ -142,9 +127,9 @@ export default class KitBlocker {
                 if (userAdditionalProperties) {
                     return true;
                 } else {
-                    var properties = {};
-                    var userProperties = validator.definition.properties
-                    for (var property in userProperties) {
+                    let properties = {};
+                    let userProperties = validator.definition.properties
+                    for (let property in userProperties) {
                         properties[property] = true;
                     }
                     return properties;
@@ -246,7 +231,7 @@ export default class KitBlocker {
                 return event;
             }
             if (matchedEvent) {
-                for (var key in event.EventAttributes) {
+                for (let key in event.EventAttributes) {
                     if (!matchedEvent[key]) {
                         delete event.EventAttributes[key];
                     }
@@ -267,7 +252,7 @@ export default class KitBlocker {
                 then remove it from event.UserAttributes as it is blocked
             */
             let matchedAttributes = this.dataPlanMatchLookups['user_attributes'];
-            for (var ua in event.UserAttributes) {
+            for (let ua in event.UserAttributes) {
                 if (!matchedAttributes[ua]) {
                     delete event.UserAttributes[ua]
                 }
