@@ -103,7 +103,7 @@ export default function APIClient(mpInstance, kitBlocker) {
 
         if (event && event.EventName !== Types.MessageType.AppStateTransition) {
             if (kitBlocker) {
-                event = kitBlocker.mutateEvent(event);
+                event = kitBlocker.createBlockedEvent(event);
             }
             if (event) {
                 mpInstance._Forwarders.sendEventToForwarders(event);

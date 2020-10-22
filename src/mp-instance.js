@@ -94,7 +94,7 @@ export default function mParticleInstance(instanceName) {
     this.init = function(apiKey, config) {
         var kitBlocker;
         if (config && config.dataPlan) {
-            kitBlocker = new KitBlocker(config.dataPlan);
+            kitBlocker = new KitBlocker(config.dataPlan, this);
         }
         this._Forwarders = new Forwarders(this, kitBlocker);
         this._APIClient = new APIClient(this, kitBlocker);

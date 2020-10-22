@@ -112,7 +112,7 @@ describe.only('kit blocking', () => {
                 CurrencyCode: 'usd',
             }
             var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
-            var mutatedEvent = kitBlocker.mutateEvent(event);
+            var mutatedEvent = kitBlocker.mutateEventAndEventAttributes(event);
             (mutatedEvent === null).should.equal(true);
     
             done();
@@ -135,7 +135,7 @@ describe.only('kit blocking', () => {
                 CurrencyCode: 'usd',
             }
             var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
-            var mutatedEvent = kitBlocker.mutateEvent(event);
+            var mutatedEvent = kitBlocker.mutateEventAndEventAttributes(event);
             mutatedEvent.EventAttributes.should.not.have.property('keyword2');
             mutatedEvent.EventAttributes.should.have.property('foo', 'hi');
     
@@ -159,7 +159,7 @@ describe.only('kit blocking', () => {
                 CurrencyCode: 'usd',
             }
             var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
-            var mutatedEvent = kitBlocker.mutateEvent(event);
+            var mutatedEvent = kitBlocker.mutateEventAndEventAttributes(event);
             mutatedEvent.EventAttributes.should.have.property('foo', 'hi');
             mutatedEvent.EventAttributes.should.have.property('keyword2', 'test');
     
@@ -182,7 +182,7 @@ describe.only('kit blocking', () => {
             done();
         });
 
-        it('block a custom event to forwarder based on data plan', function(done) {
+        it('should not block an unplanned custom event to forwarder is blok.ev=false', function(done) {
             window.mParticle._resetForTests(MPConfig);
 
             var mockForwarder = new MockForwarder();

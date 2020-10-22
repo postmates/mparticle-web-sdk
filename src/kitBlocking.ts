@@ -209,18 +209,41 @@ export default class KitBlocker {
         }
     }
 
-    mutateEvent(event: SDKEvent): SDKEvent {
+    createBlockedEvent(event: SDKEvent): SDKEvent {
+        // mutate the event/event attributes, then the user attributes, then the user identities
+        if (event) {
+            event = this.mutateEventAndEventAttributes(event)
+        }
+
+        if (event) {
+            event = this.mutateUserAttributes(event);
+            event = this.mutateUserIdentities(event);
+        }
+
+        return event
+    }
+
+    mutateEventAndEventAttributes(event: SDKEvent): SDKEvent {
         let baseEvent: BaseEvent = convertEvent(event);
         let matchKey: string = this.getMatchKey(baseEvent);
         let matchedEvent = this.dataPlanMatchLookups[matchKey];
 
         if (this.blockEvents) {
+            /* 
+                If the event is not planned, it doesn't exist in dataPlanMatchLookups
+                and should be blocked (return null to not send anything to forwarders)
+            */
             if (!matchedEvent) {
                 return null;
             }
         }
 
         if (this.blockEventAttributes) {
+            /* 
+                matchedEvent is set to `true` if additionalProperties is `true`
+                otherwise, delete attributes that exist on event.EventAttributes
+                that aren't on 
+            */
             if (matchedEvent === true) {
                 return event;
             }
