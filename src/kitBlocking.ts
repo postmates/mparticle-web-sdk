@@ -56,18 +56,16 @@ export default class KitBlocker {
         const dataPoints = dataPlan?.document?.dtpn?.vers?.version_document?.data_points
 
         if (dataPoints && dataPoints.length > 0) {
-            dataPoints.forEach(point => {
-                this.addToMatchLookups(point);
-            });
+            dataPoints.forEach(point => this.addToMatchLookups(point));
         } else {
-            console.log('There was an issue with the data plan');
+            this.mpInstance.Logger.error('There was an issue with the data plan');
             return;
         }
     }
 
     addToMatchLookups(point: DataPlanPoint) {
         if (!point.match || !point.validator) {
-            console.warn('Data Plan Point is not valid', point);
+            this.mpInstance.Logger.warning(`Data Plan Point is not valid' + ${point}`);
             return;
         }
 

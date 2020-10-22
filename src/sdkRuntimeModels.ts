@@ -162,6 +162,7 @@ export interface SDKHelpersApi {
 export interface SDKLoggerApi {
     error(arg0: string): void;
     verbose(arg0: string): void;
+    warning(arg0: string): void;
 }
 
 export interface SDKStoreApi {

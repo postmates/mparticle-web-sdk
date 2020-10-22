@@ -61,6 +61,7 @@ export default function mParticleInstance(instanceName) {
     this._SessionManager = new SessionManager(this);
     this._Persistence = new Persistence(this);
     this._Helpers = new Helpers(this);
+    this._Forwarders = new Forwarders(this);
     this._Events = new Events(this);
     this._CookieSyncManager = new CookieSyncManager(this);
     this._ServerModel = new ServerModel(this);
@@ -96,7 +97,6 @@ export default function mParticleInstance(instanceName) {
         if (config && config.dataPlan) {
             kitBlocker = new KitBlocker(config.dataPlan, this);
         }
-        this._Forwarders = new Forwarders(this, kitBlocker);
         this._APIClient = new APIClient(this, kitBlocker);
 
         if (!config) {

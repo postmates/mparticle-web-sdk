@@ -8,10 +8,7 @@ import KitBlocker from '../../src/kitBlocking';
 import Types from '../../src/types';
 import should from 'should';
 
-var getEvent = Utils.getEvent,
-    getForwarderEvent = Utils.getForwarderEvent,
-    setLocalStorage = Utils.setLocalStorage,
-    forwarderDefaultConfiguration = Utils.forwarderDefaultConfiguration,
+var forwarderDefaultConfiguration = Utils.forwarderDefaultConfiguration,
     MockForwarder = Utils.MockForwarder;
 
 declare global {
