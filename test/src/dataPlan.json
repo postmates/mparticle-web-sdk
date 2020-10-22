@@ -470,10 +470,6 @@
                                 "description": "",
                                 "type": "string"
                             },
-                            "amp_id": {
-                                "description": "",
-                                "type": "string"
-                            },
                             "email": {
                                 "description": "",
                                 "type": "string"

@@ -6,26 +6,24 @@ import * as dataPlan from './dataPlan.json';
 import Utils from './utils';
 import KitBlocker from '../../src/kitBlocking';
 import Types from '../../src/types';
+import should from 'should';
 
 var getEvent = Utils.getEvent,
     getForwarderEvent = Utils.getForwarderEvent,
     setLocalStorage = Utils.setLocalStorage,
     forwarderDefaultConfiguration = Utils.forwarderDefaultConfiguration,
-    MockForwarder = Utils.MockForwarder,
-    mockServer;
+    MockForwarder = Utils.MockForwarder;
 
 declare global {
     interface Window {
         mParticle: MParticleWebSDK;
-        // beforeunload: any;
         fetchMock: any;
         MockForwarder1: any;
     }
 }
 
-describe('kit blocking', () => {
-    var mockServer,
-        clock
+describe.only('kit blocking', () => {
+    var mockServer;
 
     beforeEach(function() {
         mockServer = sinon.createFakeServer();
@@ -46,7 +44,6 @@ describe('kit blocking', () => {
         beforeEach(function() {
             window.fetchMock.post(urls.eventsV3, 200);
             window.fetchMock.config.overwriteRoutes = true;
-            clock = sinon.useFakeTimers();
             window.mParticle.config.flags = {
                 eventsV3: '100',
                 eventBatchingIntervalMillis: 1000,
@@ -61,11 +58,10 @@ describe('kit blocking', () => {
         afterEach(function() {
             window.fetchMock.restore();
             sinon.restore();
-            clock.restore();
         });
 
         it('kitBlocker should parse data plan into dataPlanMatchLookups properly', function(done) {
-            var kitBlocker = new KitBlocker({document: dataPlan});
+            var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
             kitBlocker.dataPlanMatchLookups.should.have.property('custom_event:search:Search Event', true);
             kitBlocker.dataPlanMatchLookups.should.have.property('custom_event:location:locationEvent', {foo: true, 'foo foo': true, 'foo number': true});
             kitBlocker.dataPlanMatchLookups.should.have.property('product_action:add_to_cart', {
@@ -115,7 +111,7 @@ describe('kit blocking', () => {
                 Debug: true,
                 CurrencyCode: 'usd',
             }
-            var kitBlocker = new KitBlocker({document: dataPlan});
+            var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
             var mutatedEvent = kitBlocker.mutateEvent(event);
             (mutatedEvent === null).should.equal(true);
     
@@ -138,7 +134,7 @@ describe('kit blocking', () => {
                 Debug: true,
                 CurrencyCode: 'usd',
             }
-            var kitBlocker = new KitBlocker({document: dataPlan});
+            var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
             var mutatedEvent = kitBlocker.mutateEvent(event);
             mutatedEvent.EventAttributes.should.not.have.property('keyword2');
             mutatedEvent.EventAttributes.should.have.property('foo', 'hi');
@@ -162,7 +158,7 @@ describe('kit blocking', () => {
                 Debug: true,
                 CurrencyCode: 'usd',
             }
-            var kitBlocker = new KitBlocker({document: dataPlan});
+            var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
             var mutatedEvent = kitBlocker.mutateEvent(event);
             mutatedEvent.EventAttributes.should.have.property('foo', 'hi');
             mutatedEvent.EventAttributes.should.have.property('keyword2', 'test');
@@ -200,6 +196,153 @@ describe('kit blocking', () => {
             var event = window.MockForwarder1.instance.receivedEvent;
             event.should.have.property('EventName', 'Test Event');
             
+            done();
+        });
+
+        it('should block any unplanned user attributes blok.ua = true', function(done) {
+            const event: SDKEvent = {
+                DeviceId: 'test',
+                IsFirstRun: true,
+                EventName: 'something something something',
+                EventCategory: Types.EventType.Navigation,
+                MPID: testMPID, 
+                EventAttributes: { keyword2: 'test', foo: 'hi' },
+                SDKVersion: '1.0.0',
+                SessionId: 'sessionId',
+                SessionStartDate: 1,
+                Timestamp: 1,
+                EventDataType: Types.MessageType.PageEvent,
+                Debug: true,
+                CurrencyCode: 'usd',
+                UserAttributes: {
+                    'my attribute': 'test1',
+                    'my other attribute': 'test2',
+                    'a third attribute': 'test3',
+                    'unplanned attribute': 'test4',
+                }
+            }
+
+            var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
+            var mutatedEvent = kitBlocker.mutateUserAttributes(event);
+            mutatedEvent.UserAttributes.should.have.property('my attribute', 'test1');
+            mutatedEvent.UserAttributes.should.have.property('my other attribute', 'test2');
+            mutatedEvent.UserAttributes.should.have.property('a third attribute', 'test3');
+            mutatedEvent.UserAttributes.should.not.have.property('unplanned attribute');
+
+            done();
+        });
+
+        it('should not block any unplanned user attributes blok.ua = false', function(done) {
+            window.mParticle._resetForTests(MPConfig);
+            window.mParticle.config.dataPlan.document.dtpn.blok.ua = false;
+            window.mParticle.init(apiKey, window.mParticle.config);
+
+            const event: SDKEvent = {
+                DeviceId: 'test',
+                IsFirstRun: true,
+                EventName: 'something something something',
+                EventCategory: Types.EventType.Navigation,
+                MPID: testMPID, 
+                EventAttributes: { keyword2: 'test', foo: 'hi' },
+                SDKVersion: '1.0.0',
+                SessionId: 'sessionId',
+                SessionStartDate: 1,
+                Timestamp: 1,
+                EventDataType: Types.MessageType.PageEvent,
+                Debug: true,
+                CurrencyCode: 'usd',
+                UserAttributes: {
+                    'my attribute': 'test1',
+                    'my other attribute': 'test2',
+                    'a third attribute': 'test3',
+                    'unplanned attribute': 'test4',
+                }
+            }
+
+            var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
+            var mutatedEvent = kitBlocker.mutateUserAttributes(event);
+            mutatedEvent.UserAttributes.should.have.property('my attribute', 'test1');
+            mutatedEvent.UserAttributes.should.have.property('my other attribute', 'test2');
+            mutatedEvent.UserAttributes.should.have.property('a third attribute', 'test3');
+            mutatedEvent.UserAttributes.should.have.property('unplanned attribute', 'test4');
+
+            done();
+        });
+
+        it('should block any unplanned user identities when blok.ui = true', function(done) {
+            const event: SDKEvent = {
+                DeviceId: 'test',
+                IsFirstRun: true,
+                EventName: 'something something something',
+                EventCategory: Types.EventType.Navigation,
+                MPID: testMPID, 
+                EventAttributes: { keyword2: 'test', foo: 'hi' },
+                SDKVersion: '1.0.0',
+                SessionId: 'sessionId',
+                SessionStartDate: 1,
+                Timestamp: 1,
+                EventDataType: Types.MessageType.PageEvent,
+                UserIdentities: [
+                    { Type: 7, Identity: 'email@gmail.com' },
+                    { Type: 1, Identity: 'customerid1' },
+                    { Type: 4, Identity: 'GoogleId' }
+                ],
+                Debug: true,
+                CurrencyCode: 'usd',
+                UserAttributes: {
+                    'my attribute': 'test1',
+                    'my other attribute': 'test2',
+                    'a third attribute': 'test3',
+                    'unplanned attribute': 'test4',
+                }
+            }
+
+            var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
+            var mutatedEvent = kitBlocker.mutateUserIdentities(event);
+
+            mutatedEvent.UserIdentities.filter(UI => UI.Type === 1)[0].should.have.property('Identity', 'customerid1');
+            mutatedEvent.UserIdentities.filter(UI => UI.Type === 7)[0].should.have.property('Identity', 'email@gmail.com');
+            mutatedEvent.UserIdentities.filter(UI => UI.Type === 4)[0].should.have.property('Identity', 'GoogleId');
+
+            done();
+        });
+
+        it('should block data when UI additional properties = false and blok.ui = true', function(done) {
+            dataPlan.dtpn.vers.version_document.data_points[10].validator.definition.additionalProperties = false
+            const event: SDKEvent = {
+                DeviceId: 'test',
+                IsFirstRun: true,
+                EventName: 'something something something',
+                EventCategory: Types.EventType.Navigation,
+                MPID: testMPID, 
+                EventAttributes: { keyword2: 'test', foo: 'hi' },
+                SDKVersion: '1.0.0',
+                SessionId: 'sessionId',
+                SessionStartDate: 1,
+                Timestamp: 1,
+                EventDataType: Types.MessageType.PageEvent,
+                UserIdentities: [
+                    { Type: 7, Identity: 'email@gmail.com' },
+                    { Type: 1, Identity: 'customerid1' },
+                    { Type: 4, Identity: 'GoogleId' }
+                ],
+                Debug: true,
+                CurrencyCode: 'usd',
+                UserAttributes: {
+                    'my attribute': 'test1',
+                    'my other attribute': 'test2',
+                    'a third attribute': 'test3',
+                    'unplanned attribute': 'test4',
+                }
+            }
+
+            var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
+            var mutatedEvent = kitBlocker.mutateUserIdentities(event);
+
+            mutatedEvent.UserIdentities.filter(UI => UI.Type === 1)[0].should.have.property('Identity', 'customerid1');
+            mutatedEvent.UserIdentities.filter(UI => UI.Type === 7)[0].should.have.property('Identity', 'email@gmail.com');
+            mutatedEvent.UserIdentities.filter(UI => UI.Type === 4).length.should.equal(0);
+
             done();
         });
     })

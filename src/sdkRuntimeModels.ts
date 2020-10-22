@@ -154,7 +154,9 @@ export interface SDKIdentityApi {
 
 export interface SDKHelpersApi {
     createServiceUrl(arg0: string, arg1: string): void;
+    parseNumber(value: number)
     generateUniqueId();
+    isObject(item: any)
 }
 
 export interface SDKLoggerApi {

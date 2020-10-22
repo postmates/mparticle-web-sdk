@@ -1,7 +1,7 @@
 import { convertEvent } from './sdkToEventsApiConverter';
-import { SDKEvent } from './sdkRuntimeModels';
+import { SDKEvent, MParticleWebSDK } from './sdkRuntimeModels';
 import { BaseEvent, EventTypeEnum } from '@mparticle/event-models';
-
+import Types from './types'
 import { DataPlanPoint } from '@mparticle/data-planning-models';
 
 // TODO: Why does this not build when importing from @mparticle/data-planning-models?!
@@ -44,8 +44,10 @@ export default class KitBlocker {
     blockEventAttributes: Boolean = false;
     blockUserAttributes: Boolean = false;
     blockUserIdentities: Boolean = false;
+    mpInstance: MParticleWebSDK;
 
-    constructor(dataPlan: any) {
+    constructor(dataPlan: any, mpInstance: MParticleWebSDK) {
+        this.mpInstance = mpInstance;
         this.blockEvents = dataPlan?.document?.dtpn?.blok?.ev;
         this.blockEventAttributes = dataPlan?.document?.dtpn?.blok?.ea;
         this.blockUserAttributes = dataPlan?.document?.dtpn?.blok?.ua;
@@ -237,16 +239,48 @@ export default class KitBlocker {
         return event;
     }
 
-
-
-    mutateUserAttributes(userAttributes) {
+    mutateUserAttributes(event: SDKEvent) {
         if (this.blockUserAttributes) {
+            /* 
+                If the user attribute is not found in the matchedAttributes
+                then remove it from event.UserAttributes as it is blocked
+            */
+            let matchedAttributes = this.dataPlanMatchLookups['user_attributes'];
+            for (var ua in event.UserAttributes) {
+                if (!matchedAttributes[ua]) {
+                    delete event.UserAttributes[ua]
+                }
+            }
+            return event
+        } else {
+            return event
         }
-
     }
 
-    mutateUserIdentities() {
+    mutateUserIdentities(event: SDKEvent) {
+            /* 
+                If the user identity is not found in matchedIdentities
+                then remove it from event.UserIdentities as it is blocked.
+                event.UserIdentities is of type [{Identity: 'id1', Type: 7}, ...]
+                and so to compare properly in matchedIdentities, each Type needs 
+                to be converted to an identityName
+            */
         if (this.blockUserIdentities) {
+            let matchedIdentities = this.dataPlanMatchLookups['user_identities'];
+            if (this.mpInstance._Helpers.isObject(matchedIdentities)) {
+                if (event?.UserIdentities?.length) {
+                    event.UserIdentities.forEach((uiByType, i) => {
+                        const identityName = Types.IdentityType.getIdentityName(
+                            this.mpInstance._Helpers.parseNumber(uiByType.Type)
+                        );
+    
+                        if (!matchedIdentities[identityName]) {
+                            event.UserIdentities.splice(i, 1);
+                        }
+                    });
+                }
+            }
         }
+        return event
     }
 }
