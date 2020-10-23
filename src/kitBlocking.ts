@@ -29,22 +29,25 @@ export default class KitBlocker {
     blockEventAttributes: Boolean = false;
     blockUserAttributes: Boolean = false;
     blockUserIdentities: Boolean = false;
+    kitBlockingEnabled: Boolean = false;
     mpInstance: MParticleWebSDK;
 
     constructor(dataPlan: any, mpInstance: MParticleWebSDK) {
         this.mpInstance = mpInstance;
+        this.kitBlockingEnabled = Boolean(dataPlan?.document?.dtpn?.blok)
         this.blockEvents = dataPlan?.document?.dtpn?.blok?.ev;
         this.blockEventAttributes = dataPlan?.document?.dtpn?.blok?.ea;
         this.blockUserAttributes = dataPlan?.document?.dtpn?.blok?.ua;
         this.blockUserIdentities = dataPlan?.document?.dtpn?.blok?.ui;
 
         const dataPoints = dataPlan?.document?.dtpn?.vers?.version_document?.data_points
-
-        if (dataPoints && dataPoints.length > 0) {
-            dataPoints.forEach(point => this.addToMatchLookups(point));
-        } else {
-            this.mpInstance.Logger.error('There was an issue with the data plan');
-            return;
+        if (dataPlan) {
+            if (dataPoints && dataPoints.length > 0) {
+                dataPoints.forEach(point => this.addToMatchLookups(point));
+            } else {
+                this.mpInstance.Logger.error('There was an issue with the data plan');
+                return;
+            }
         }
     }
 
@@ -252,15 +255,34 @@ export default class KitBlocker {
                 then remove it from event.UserAttributes as it is blocked
             */
             let matchedAttributes = this.dataPlanMatchLookups['user_attributes'];
-            for (let ua in event.UserAttributes) {
-                if (!matchedAttributes[ua]) {
-                    delete event.UserAttributes[ua]
+                if (this.mpInstance._Helpers.isObject(matchedAttributes)) {
+                    for (let ua in event.UserAttributes) {
+                        if (!matchedAttributes[ua]) {
+                            delete event.UserAttributes[ua]
+                        }
+                    }
                 }
-            }
-            return event
-        } else {
-            return event
         }
+    
+        return event
+    }
+
+    isAttributeKeyBlocked(key: string) {
+        if (!this.kitBlockingEnabled) {
+            return false
+        }
+        if (this.blockUserAttributes) {
+            let matchedAttributes = this.dataPlanMatchLookups['user_attributes'];
+            if (matchedAttributes === true) {
+                return false
+            }
+            if (!matchedAttributes[key]) {
+                return true
+            }
+        } else {
+            return false
+        }
+        return false
     }
 
     mutateUserIdentities(event: SDKEvent) {

@@ -1,7 +1,7 @@
 import Types from './types';
 import filteredMparticleUser from './filteredMparticleUser';
 
-export default function Forwarders(mpInstance) {
+export default function Forwarders(mpInstance, kitBlocker) {
     var self = this;
     this.initForwarders = function(userIdentities, forwardingStatsCallback) {
         var user = mpInstance.Identity.getCurrentUser();
@@ -447,6 +447,10 @@ export default function Forwarders(mpInstance) {
     };
 
     this.callSetUserAttributeOnForwarders = function(key, value) {
+        if (kitBlocker.isAttributeKeyBlocked(key)) {
+            return;
+        }
+
         if (mpInstance._Store.activeForwarders.length) {
             mpInstance._Store.activeForwarders.forEach(function(forwarder) {
                 if (

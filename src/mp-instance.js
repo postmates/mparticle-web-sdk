@@ -61,7 +61,6 @@ export default function mParticleInstance(instanceName) {
     this._SessionManager = new SessionManager(this);
     this._Persistence = new Persistence(this);
     this._Helpers = new Helpers(this);
-    this._Forwarders = new Forwarders(this);
     this._Events = new Events(this);
     this._CookieSyncManager = new CookieSyncManager(this);
     this._ServerModel = new ServerModel(this);
@@ -94,11 +93,6 @@ export default function mParticleInstance(instanceName) {
 
     this.init = function(apiKey, config) {
         var kitBlocker;
-        if (config && config.dataPlan) {
-            kitBlocker = new KitBlocker(config.dataPlan, this);
-        }
-        this._APIClient = new APIClient(this, kitBlocker);
-
         if (!config) {
             window.console.warn(
                 'You did not pass a config object to init(). mParticle will not initialize properly'
@@ -106,6 +100,10 @@ export default function mParticleInstance(instanceName) {
         }
 
         runPreConfigFetchInitialization(this, apiKey, config);
+        kitBlocker = new KitBlocker(config.dataPlan, this);
+
+        this._APIClient = new APIClient(this, kitBlocker);
+        this._Forwarders = new Forwarders(this, kitBlocker);
 
         // config code - Fetch config when requestConfig = true, otherwise, proceed with SDKInitialization
         // Since fetching the configuration is asynchronous, we must pass completeSDKInitialization
