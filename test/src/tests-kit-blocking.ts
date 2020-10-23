@@ -18,7 +18,7 @@ declare global {
     }
 }
 
-describe.only('kit blocking', () => {
+describe('kit blocking', () => {
     var mockServer;
 
     beforeEach(function() {
@@ -281,7 +281,7 @@ describe.only('kit blocking', () => {
                     'unplanned attribute': 'test4',
                 }
             }
-            debugger;
+
             var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
             var mutatedEvent = kitBlocker.mutateUserAttributes(event);
             mutatedEvent.UserAttributes.should.have.property('my attribute', 'test1');
@@ -347,6 +347,68 @@ describe.only('kit blocking', () => {
             window.mParticle.config.kitConfigs.push(forwarderDefaultConfiguration('MockForwarder'));
             window.mParticle.init(apiKey, window.mParticle.config);
             window.mParticle.Identity.getCurrentUser().setUserAttribute('unplanned but not blocked', true);
+            window.MockForwarder1.instance.should.have.property(
+                'setUserAttributeCalled',
+                true
+            );
+
+            window.mParticle.config.dataPlan.document.dtpn.blok.ua = true
+
+            done();
+        });
+
+        it('should block an unplanned attribute set via setUserTag from being set on the forwarder if additionalProperties = false and blok.ua = true', function(done) {
+            window.mParticle._resetForTests(MPConfig);
+
+            var mockForwarder = new MockForwarder();
+            window.mParticle.addForwarder(mockForwarder);
+            window.mParticle.config.kitConfigs.push(forwarderDefaultConfiguration('MockForwarder'));
+            window.mParticle.init(apiKey, window.mParticle.config);
+
+            window.mParticle.Identity.getCurrentUser().setUserTag('unplannedAttr', true);
+            window.MockForwarder1.instance.should.have.property(
+                'setUserAttributeCalled',
+                false
+            );
+
+            done();
+        });
+
+        it('should allow an unplanned attribute set via setUserTag to be set on forwarder if additionalProperties = true and blok.ua = true', function(done) {
+            window.mParticle._resetForTests(MPConfig);
+
+            var userAttributeDataPoint = dataPlan.dtpn.vers.version_document.data_points.find(dataPoint => {
+                return dataPoint.match.type === 'user_attributes'
+            });
+
+            userAttributeDataPoint.validator.definition.additionalProperties = true;
+
+            var mockForwarder = new MockForwarder();
+            window.mParticle.addForwarder(mockForwarder);
+            window.mParticle.config.kitConfigs.push(forwarderDefaultConfiguration('MockForwarder'));
+            window.mParticle.init(apiKey, window.mParticle.config);
+
+            debugger;
+            window.mParticle.Identity.getCurrentUser().setUserTag('unplanned but unblocked', true);
+            window.MockForwarder1.instance.should.have.property(
+                'setUserAttributeCalled',
+                true
+            );
+
+            userAttributeDataPoint.validator.definition.additionalProperties = false;
+            
+            done();
+        });
+    
+        it('should allow an unplanned user attribute set via setUserTag to be set on the forwarder if blok=false', function(done) {
+            window.mParticle.config.dataPlan.document.dtpn.blok.ua = false
+            window.mParticle._resetForTests(MPConfig);
+
+            var mockForwarder = new MockForwarder();
+            window.mParticle.addForwarder(mockForwarder);
+            window.mParticle.config.kitConfigs.push(forwarderDefaultConfiguration('MockForwarder'));
+            window.mParticle.init(apiKey, window.mParticle.config);
+            window.mParticle.Identity.getCurrentUser().setUserTag('unplanned but not blocked', true);
             window.MockForwarder1.instance.should.have.property(
                 'setUserAttributeCalled',
                 true
