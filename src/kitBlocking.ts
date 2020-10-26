@@ -22,6 +22,17 @@ let DataPlanMatchType = {
 /*  
     inspiration from https://github.com/mParticle/data-planning-node/blob/master/src/data_planning/data_plan_event_validator.ts
     but modified to only include commerce events, custom events, screen views, and removes validation
+
+    The purpose of the KitBlocker class is to parse a data plan and determine what events, event/user/product attributes, and user identities should be blocked from downstream forwarders.
+
+    KitBlocker is instantiated with a data plan on mParticle initialization. KitBlocker.kitBlockingEnabled is false if no data plan is passed.
+    It parses the data plan by creating a `dataPlanMatchLookups` object in the following manner:
+        1. For all events and user attributes/identities, it generates a `matchKey` in the shape of `typeOfEvent:eventType:nameOfEvent`
+            a. The matchKeys' value will return `true` if additionalProperties for the custom attributes/identities is `true`, otherwise it will return an object of planned attribute/identities
+        2. For commerce events, after step 1 and 1a, a second `matchKey` is included that appends `Products`. This is used to determine productAttributes blocked
+    
+    When an event is logged in mParticle, it is sent to our server and then calls `KitBlocker.createBlockedEvent` before passing the event to each forwarder.
+    If the event is blocked, it will not send to the forwarder. If the event is not blocked, event/user/product attributes and user identities will be removed/mutated if blocked.
 */
 export default class KitBlocker {
     dataPlanMatchLookups: { [key: string]: {} } = {};
@@ -402,6 +413,7 @@ export default class KitBlocker {
     }
 
     isAttributeKeyBlocked(key: string) {
+        /* used when an attribute is added to the user */
         if (!this.kitBlockingEnabled) {
             return false
         }
