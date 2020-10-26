@@ -57,10 +57,22 @@ export default class KitBlocker {
             return;
         }
 
-        const matchKey: string = this.generateMatchKey(point.match);
-        const properties: null | Boolean | {[key: string]: true}  = this.getProperties(point.match.type, point.validator)
-
+        // match keys for non product custom attribute related data poins
+        let matchKey: string = this.generateMatchKey(point.match);
+        let properties: null | Boolean | {[key: string]: true}  = this.getEventProperties(point.match.type, point.validator)
+        
         this.dataPlanMatchLookups[matchKey] = properties;
+
+        // match keys for product custom attribute related data poins
+        if (point.match.type === DataPlanMatchType.ProductImpression ||
+            point.match.type === DataPlanMatchType.ProductAction ||
+            point.match.type === DataPlanMatchType.PromotionAction) {
+
+            matchKey = this.generateProductAttributeMatchKey(point.match);
+            properties = this.getProductProperties(point.match.type, point.validator)
+        
+            this.dataPlanMatchLookups[matchKey] = properties;
+        }
     }
 
     generateMatchKey(match): string | null {
@@ -83,6 +95,7 @@ export default class KitBlocker {
                 ].join(':');
 
             case DataPlanMatchType.ProductAction:
+                debugger;
                 const productActionMatch = match.criteria;
                 return [match.type as string, productActionMatch.action].join(':');
 
@@ -103,14 +116,35 @@ export default class KitBlocker {
         }
     }
 
-    getProperties(type, validator): Boolean | {[key: string]: true} | null {
+    generateProductAttributeMatchKey(match): string | null {
+        switch (match.type) {
+            case DataPlanMatchType.ProductAction:
+                const productActionMatch = match.criteria;
+                return [match.type as string, productActionMatch.action, 'ProductAttributes'].join(':');
+
+            case DataPlanMatchType.PromotionAction:
+                const promoActionMatch = match.criteria;
+                return [match.type as string, promoActionMatch.action, 'ProductAttributes'].join(':');
+
+            case DataPlanMatchType.ProductImpression:
+                const productImpressionActionMatch = match.criteria;
+                return [match.type as string, productImpressionActionMatch.action, 'ProductAttributes'].join(':');
+
+            default:
+                return null;
+        }
+    }
+
+    getEventProperties(type, validator): Boolean | {[key: string]: true} | null {
+        let customAttributes;
+        let userAdditionalProperties;
         switch (type) {
             case DataPlanMatchType.CustomEvent:
             case DataPlanMatchType.ScreenView:
             case DataPlanMatchType.ProductAction:
             case DataPlanMatchType.PromotionAction:
             case DataPlanMatchType.ProductImpression:
-                let customAttributes = validator?.definition?.properties?.data?.properties?.custom_attributes
+                customAttributes = validator?.definition?.properties?.data?.properties?.custom_attributes
                 if (customAttributes) {
                     if (customAttributes.additionalProperties) {
                         return true;
@@ -126,7 +160,7 @@ export default class KitBlocker {
                 }
             case DataPlanMatchType.UserAttributes:
             case DataPlanMatchType.UserIdentities:
-                let userAdditionalProperties = validator?.definition?.additionalProperties;
+                userAdditionalProperties = validator?.definition?.additionalProperties;
                 if (userAdditionalProperties) {
                     return true;
                 } else {
@@ -137,6 +171,35 @@ export default class KitBlocker {
                     }
                     return properties;
                 }
+            default:
+                return null;
+        }
+    }
+
+    getProductProperties(type, validator): Boolean | {[key: string]: true} | null {
+        let productCustomAttributes;
+        switch (type) {
+            case DataPlanMatchType.ProductAction:
+            case DataPlanMatchType.PromotionAction:
+            case DataPlanMatchType.ProductImpression:
+                //product transaction attributes
+                productCustomAttributes = validator?.definition?.properties?.data?.properties?.product_action?.properties?.products?.items?.properties?.custom_attributes
+                //product item attributes
+                if (productCustomAttributes) {
+                    if (productCustomAttributes.additionalProperties) {
+                        return true;
+                    } else {
+                        let properties = {};
+                        for (let property in productCustomAttributes?.properties) {
+                            properties[property] = true;
+                        }
+                        return properties;
+                    }
+                } else {
+                    return true;
+                }
+
+
             default:
                 return null;
         }
@@ -160,6 +223,7 @@ export default class KitBlocker {
                 const matchKey: string[] = [];
 
                 if (commerceEvent && commerceEvent.data) {
+                    debugger;
                     const {
                         product_action,
                         product_impressions,
@@ -176,7 +240,7 @@ export default class KitBlocker {
                         matchKey.push(promotion_action.action);
                     } else if (product_impressions) {
                         matchKey.push(DataPlanMatchType.ProductImpression);
-                        matchKey.push('promotion_action');
+                        matchKey.push('product_impression');
                     }
                 }
                 return matchKey.join(':');
@@ -195,10 +259,43 @@ export default class KitBlocker {
         }
     }
 
+    getProductAttributeMatchKey(eventToMatch: BaseEvent): string | null {
+        switch (eventToMatch.event_type) {
+            case EventTypeEnum.commerceEvent:
+                const commerceEvent = eventToMatch as any;
+                const matchKey: string[] = [];
+                const {
+                    product_action,
+                    product_impressions,
+                    promotion_action,
+                } = commerceEvent.data;
+
+                if (product_action) {
+                    matchKey.push(DataPlanMatchType.ProductAction);
+                    matchKey.push(product_action.action);
+                    matchKey.push('ProductAttributes');
+                } else if (promotion_action) {
+                    matchKey.push(DataPlanMatchType.PromotionAction);
+                    matchKey.push(promotion_action.action);
+                    matchKey.push('ProductAttributes');
+                } else if (product_impressions) {
+                    matchKey.push(DataPlanMatchType.ProductImpression);
+                    matchKey.push('ProductAttributes');
+                }
+                return matchKey.join(':');
+            default:
+                return null;
+        }
+    }
+
     createBlockedEvent(event: SDKEvent): SDKEvent {
         // mutate the event/event attributes, then the user attributes, then the user identities
         if (event) {
             event = this.mutateEventAndEventAttributes(event)
+        }
+    
+        if (event && event.EventDataType === Types.MessageType.Commerce) {
+            event = this.mutateProductAttributes(event);
         }
 
         if (event) {
@@ -239,6 +336,48 @@ export default class KitBlocker {
                         delete event.EventAttributes[key];
                     }
                 }
+                return event;
+            } else {
+                return event;
+            }
+        }
+
+        return event;
+    }
+
+    mutateProductAttributes(event: SDKEvent): SDKEvent {
+        let baseEvent: BaseEvent = convertEvent(event);
+        let matchKey: string = this.getProductAttributeMatchKey(baseEvent);
+        let matchedEvent = this.dataPlanMatchLookups[matchKey];
+
+        if (this.blockEvents) {
+            /* 
+                If the event is not planned, it doesn't exist in dataPlanMatchLookups
+                and should be blocked (return null to not send anything to forwarders)
+            */
+            if (!matchedEvent) {
+                return null;
+            }
+        }
+
+        if (this.blockEventAttributes) {
+            /* 
+                matchedEvent is set to `true` if additionalProperties is `true`
+                otherwise, delete attributes that exist on event.EventAttributes
+                that aren't on 
+            */
+            if (matchedEvent === true) {
+                return event;
+            }
+            if (matchedEvent) {
+                event.ProductAction?.ProductList?.forEach(product => {
+                    for (let productKey in product.Attributes) {
+                    if (!matchedEvent[productKey]) {
+                        delete product.Attributes[productKey];
+                    }
+                }
+            })
+                
                 return event;
             } else {
                 return event;
