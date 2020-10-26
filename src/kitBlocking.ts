@@ -95,7 +95,6 @@ export default class KitBlocker {
                 ].join(':');
 
             case DataPlanMatchType.ProductAction:
-                debugger;
                 const productActionMatch = match.criteria;
                 return [match.type as string, productActionMatch.action].join(':');
 
@@ -223,7 +222,6 @@ export default class KitBlocker {
                 const matchKey: string[] = [];
 
                 if (commerceEvent && commerceEvent.data) {
-                    debugger;
                     const {
                         product_action,
                         product_impressions,
@@ -232,15 +230,12 @@ export default class KitBlocker {
 
                     if (product_action) {
                         matchKey.push(DataPlanMatchType.ProductAction);
-                        matchKey.push('product_action');
                         matchKey.push(product_action.action);
                     } else if (promotion_action) {
                         matchKey.push(DataPlanMatchType.PromotionAction);
-                        matchKey.push('promotion_action');
                         matchKey.push(promotion_action.action);
                     } else if (product_impressions) {
                         matchKey.push(DataPlanMatchType.ProductImpression);
-                        matchKey.push('product_impression');
                     }
                 }
                 return matchKey.join(':');

@@ -163,7 +163,7 @@ describe('kit blocking', () => {
             done();
         });
 
-        it('should block a custom event from reaching the forwarder if event is unplanned and block.ev=true', function(done) {
+        it('integration test - should block a custom event from reaching the forwarder if event is unplanned and block.ev=true', function(done) {
             window.mParticle._resetForTests(MPConfig);
 
             var mockForwarder = new MockForwarder();
@@ -179,7 +179,7 @@ describe('kit blocking', () => {
             done();
         });
 
-        it('should allow unplanned custom events through to forwarder if blok.ev=false', function(done) {
+        it('integration test - should allow unplanned custom events through to forwarder if blok.ev=false', function(done) {
             window.mParticle._resetForTests(MPConfig);
 
             var mockForwarder = new MockForwarder();
@@ -295,7 +295,7 @@ describe('kit blocking', () => {
             done();
         });
 
-        it('should block an unplanned attribute from being set on the forwarder if additionalProperties = false and blok.ua = true', function(done) {
+        it('integration test - should block an unplanned attribute from being set on the forwarder if additionalProperties = false and blok.ua = true', function(done) {
             window.mParticle._resetForTests(MPConfig);
 
             var mockForwarder = new MockForwarder();
@@ -312,7 +312,7 @@ describe('kit blocking', () => {
             done();
         });
 
-        it('should allow an unplanned attribute to be set on forwarder if additionalProperties = true and blok.ua = true', function(done) {
+        it('integration test - should allow an unplanned attribute to be set on forwarder if additionalProperties = true and blok.ua = true', function(done) {
             window.mParticle._resetForTests(MPConfig);
 
             var userAttributeDataPoint = dataPlan.dtpn.vers.version_document.data_points.find(dataPoint => {
@@ -337,7 +337,7 @@ describe('kit blocking', () => {
             done();
         });
     
-        it('should allow an unplanned user attribute to be set on the forwarder if blok=false', function(done) {
+        it('integration test - should allow an unplanned user attribute to be set on the forwarder if blok=false', function(done) {
             window.mParticle.config.dataPlan.document.dtpn.blok.ua = false
             window.mParticle._resetForTests(MPConfig);
 
@@ -356,7 +356,7 @@ describe('kit blocking', () => {
             done();
         });
 
-        it('should block an unplanned attribute set via setUserTag from being set on the forwarder if additionalProperties = false and blok.ua = true', function(done) {
+        it('integration test - should block an unplanned attribute set via setUserTag from being set on the forwarder if additionalProperties = false and blok.ua = true', function(done) {
             window.mParticle._resetForTests(MPConfig);
 
             var mockForwarder = new MockForwarder();
@@ -373,7 +373,7 @@ describe('kit blocking', () => {
             done();
         });
 
-        it('should allow an unplanned attribute set via setUserTag to be set on forwarder if additionalProperties = true and blok.ua = true', function(done) {
+        it('integration test - should allow an unplanned attribute set via setUserTag to be set on forwarder if additionalProperties = true and blok.ua = true', function(done) {
             window.mParticle._resetForTests(MPConfig);
 
             var userAttributeDataPoint = dataPlan.dtpn.vers.version_document.data_points.find(dataPoint => {
@@ -398,7 +398,7 @@ describe('kit blocking', () => {
             done();
         });
     
-        it('should allow an unplanned user attribute set via setUserTag to be set on the forwarder if blok=false', function(done) {
+        it('integration test - should allow an unplanned user attribute set via setUserTag to be set on the forwarder if blok=false', function(done) {
             window.mParticle.config.dataPlan.document.dtpn.blok.ua = false
             window.mParticle._resetForTests(MPConfig);
 
@@ -471,7 +471,7 @@ describe('kit blocking', () => {
             done();
         });
 
-        it('should block UIs when additional properties = false and blok.ui = true', function(done) {
+        it('should block user identities when additional properties = false and blok.ui = true', function(done) {
             var userIdentityDataPoint = dataPlan.dtpn.vers.version_document.data_points.find(dataPoint => {
                 return dataPoint.match.type === 'user_identities'
             });
@@ -505,6 +505,61 @@ describe('kit blocking', () => {
             mutatedEvent.UserIdentities.find(UI => UI.Type === 1).should.have.property('Identity', 'customerid1');
             mutatedEvent.UserIdentities.find(UI => UI.Type === 7).should.have.property('Identity', 'email@gmail.com');
             (mutatedEvent.UserIdentities.find(UI => UI.Type === 4) === undefined).should.equal(true);
+
+            // reset
+            userIdentityDataPoint.validator.definition.additionalProperties = true;
+
+            done();
+        });
+
+        it('integration test - should not block any unplanned user identities to the forwarder when blok.ui = true and additionalProperties = true', function(done) {
+            window.mParticle._resetForTests(MPConfig);
+
+            var mockForwarder = new MockForwarder();
+            window.mParticle.addForwarder(mockForwarder);
+            window.mParticle.config.kitConfigs.push(forwarderDefaultConfiguration('MockForwarder'));
+            window.mParticle.init(apiKey, window.mParticle.config);
+            mockServer.respondWith(urls.login, [
+                200,
+                {},
+                JSON.stringify({ mpid: 'anotherMPID', is_logged_in: true }),
+            ]);
+
+            window.mParticle.Identity.login({userIdentities: {customerid: 'customerid1', email: 'email@gmail.com', 'google': 'GoogleId'}});
+            window.mParticle.logEvent('something something something', Types.EventType.Navigation);
+            var event = window.MockForwarder1.instance.receivedEvent;
+            event.UserIdentities.find(UI => UI.Type === 1).should.have.property('Identity', 'customerid1');
+            event.UserIdentities.find(UI => UI.Type === 7).should.have.property('Identity', 'email@gmail.com');
+            event.UserIdentities.find(UI => UI.Type === 4).should.have.property('Identity', 'GoogleId');
+
+            done();
+        });
+
+        it('integration test - should block user identities to the forwarder when additional properties = false and blok.ui = true', function(done) {
+            var userIdentityDataPoint = dataPlan.dtpn.vers.version_document.data_points.find(dataPoint => {
+                return dataPoint.match.type === 'user_identities'
+            });
+
+            userIdentityDataPoint.validator.definition.additionalProperties = false;
+
+            window.mParticle._resetForTests(MPConfig);
+
+            var mockForwarder = new MockForwarder();
+            window.mParticle.addForwarder(mockForwarder);
+            window.mParticle.config.kitConfigs.push(forwarderDefaultConfiguration('MockForwarder'));
+            window.mParticle.init(apiKey, window.mParticle.config);
+            mockServer.respondWith(urls.login, [
+                200,
+                {},
+                JSON.stringify({ mpid: 'anotherMPID', is_logged_in: true }),
+            ]);
+
+            window.mParticle.Identity.login({userIdentities: {customerid: 'customerid1', email: 'email@gmail.com', 'google': 'GoogleId'}});
+            window.mParticle.logEvent('something something something', Types.EventType.Navigation);
+            var event = window.MockForwarder1.instance.receivedEvent;
+            event.UserIdentities.find(UI => UI.Type === 1).should.have.property('Identity', 'customerid1');
+            event.UserIdentities.find(UI => UI.Type === 7).should.have.property('Identity', 'email@gmail.com');
+            (event.UserIdentities.find(UI => UI.Type === 4) === undefined).should.not.have.property('Identity', 'GoogleId');
 
             // reset
             userIdentityDataPoint.validator.definition.additionalProperties = true;
@@ -643,6 +698,106 @@ describe('kit blocking', () => {
             mutatedEvent.ProductAction.ProductList[1].Attributes.should.have.property('plannedAttr1');
             mutatedEvent.ProductAction.ProductList[1].Attributes.should.have.property('plannedAttr2');
     
+            done();
+        });
+
+        it('integration test - should block any unplanned product attributes from reaching the forwarder if additionalProperties = false and block.ea=true', function(done) {
+            window.mParticle._resetForTests(MPConfig);
+
+            var mockForwarder = new MockForwarder();
+            window.mParticle.addForwarder(mockForwarder);
+            window.mParticle.config.kitConfigs.push(forwarderDefaultConfiguration('MockForwarder'));
+            window.mParticle.init(apiKey, window.mParticle.config);
+            var prodattr1 = {
+                'plannedAttr1': 'val1',
+                'plannedAttr2': 'val2',
+                'unplannedAttr1': 'val3'
+            };
+            var prodattr2 = {
+                'plannedAttr1': 'val1',
+                'plannedAttr2': 'val2',
+                'unplannedAttr1': 'val3'
+            };
+
+            var product1 = window.mParticle.eCommerce.createProduct('iphone', 'iphoneSKU', 999, 1, 'variant', 'category', 'brand', 1, 'coupon', prodattr1);
+            var product2 = window.mParticle.eCommerce.createProduct('galaxy', 'galaxySKU', 799, 1, 'variant', 'category', 'brand', 1, 'coupon', prodattr2);
+
+            var transactionAttributes = {
+                Id: 'foo-transaction-id',
+                Revenue: 430.00,
+                Tax: 30
+            };
+            var customAttributes = {sale: true};
+            var customFlags = {'Google.Category': 'travel'};
+        
+            window.mParticle.eCommerce.logProductAction(
+                window.mParticle.ProductActionType.Purchase,
+                [product1, product2],
+                customAttributes,
+                customFlags,
+                transactionAttributes);
+
+
+            var event = window.MockForwarder1.instance.receivedEvent;
+
+            event.ProductAction.ProductList[0].Attributes.should.have.property('plannedAttr1', 'val1')
+            event.ProductAction.ProductList[0].Attributes.should.have.property('plannedAttr2', 'val2')
+            event.ProductAction.ProductList[0].Attributes.should.not.have.property('unplannedAttr1')
+
+            event.ProductAction.ProductList[1].Attributes.should.have.property('plannedAttr1', 'val1')
+            event.ProductAction.ProductList[1].Attributes.should.have.property('plannedAttr2', 'val2')
+            event.ProductAction.ProductList[1].Attributes.should.not.have.property('unplannedAttr1')
+            
+            done();
+        });
+
+        it('integration test - should not block unplanned product attributes from reaching the forwarder if additionalProperties = true and block.ea=true', function(done) {
+            window.mParticle._resetForTests(MPConfig);
+
+            var mockForwarder = new MockForwarder();
+            window.mParticle.addForwarder(mockForwarder);
+            window.mParticle.config.kitConfigs.push(forwarderDefaultConfiguration('MockForwarder'));
+            window.mParticle.init(apiKey, window.mParticle.config);
+            var prodattr1 = {
+                'plannedAttr1': 'val1',
+                'plannedAttr2': 'val2',
+                'unplannedAttr1': 'val3'
+            };
+            var prodattr2 = {
+                'plannedAttr1': 'val1',
+                'plannedAttr2': 'val2',
+                'unplannedAttr1': 'val3'
+            };
+
+            var product1 = window.mParticle.eCommerce.createProduct('iphone', 'iphoneSKU', 999, 1, 'variant', 'category', 'brand', 1, 'coupon', prodattr1);
+            var product2 = window.mParticle.eCommerce.createProduct('galaxy', 'galaxySKU', 799, 1, 'variant', 'category', 'brand', 1, 'coupon', prodattr2);
+
+            var transactionAttributes = {
+                Id: 'foo-transaction-id',
+                Revenue: 430.00,
+                Tax: 30
+            };
+            var customAttributes = {sale: true};
+            var customFlags = {'Google.Category': 'travel'};
+        
+            window.mParticle.eCommerce.logProductAction(
+                window.mParticle.ProductActionType.AddToCart,
+                [product1, product2],
+                customAttributes,
+                customFlags,
+                transactionAttributes);
+
+
+            var event = window.MockForwarder1.instance.receivedEvent;
+
+            event.ProductAction.ProductList[0].Attributes.should.have.property('plannedAttr1', 'val1')
+            event.ProductAction.ProductList[0].Attributes.should.have.property('plannedAttr2', 'val2')
+            event.ProductAction.ProductList[0].Attributes.should.have.property('unplannedAttr1')
+
+            event.ProductAction.ProductList[1].Attributes.should.have.property('plannedAttr1', 'val1')
+            event.ProductAction.ProductList[1].Attributes.should.have.property('plannedAttr2', 'val2')
+            event.ProductAction.ProductList[1].Attributes.should.have.property('unplannedAttr1')
+            
             done();
         });
     })

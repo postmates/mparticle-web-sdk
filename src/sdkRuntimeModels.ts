@@ -124,7 +124,7 @@ export interface MParticleWebSDK {
     ServerModel();
     upload();
     setPosition(lat: number | string, lng: number | string): void;
-    logEvent(eventName: string): void;
+    logEvent(eventName: string, eventType?: number): void;
     eCommerce: any;
     logLevel: string;
     ProductActionType: SDKProductActionType;
@@ -150,6 +150,9 @@ export interface SDKConfig {
 export interface SDKIdentityApi {
     getCurrentUser();
     IdentityAPI;
+    login;
+    logout;
+    modify;
 }
 
 export interface SDKHelpersApi {
