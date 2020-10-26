@@ -18,7 +18,7 @@ declare global {
     }
 }
 
-describe('kit blocking', () => {
+describe.only('kit blocking', () => {
     var mockServer;
 
     beforeEach(function() {
@@ -511,6 +511,184 @@ describe('kit blocking', () => {
             // reset
             userIdentityDataPoint.validator.definition.additionalProperties = true;
 
+            done();
+        });
+
+
+
+
+
+
+
+
+
+        it('should mutate productAttributes if an event attribute is not planned and blok.ea = true', function(done) {
+            const event: SDKEvent = {
+                DeviceId: 'test',
+                IsFirstRun: true,
+                EventName: 'locationEvent',
+                EventCategory: Types.CommerceEventType.Purchase,
+                MPID: testMPID, 
+                // EventAttributes: { unplannedAttr: 'test', foo: 'hi' }, //check these
+                SDKVersion: '1.0.0',
+                SessionId: 'sessionId',
+                SessionStartDate: 1,
+                Timestamp: 1,
+                EventDataType: Types.MessageType.Commerce,
+                Debug: true,
+                CurrencyCode: 'usd',
+                ProductAction: {
+                    ProductActionType: SDKProductActionType.Purchase,
+                    ProductList: [
+                        {
+                            Attributes: {
+                                'plannedAttr1': 'val1',
+                                'plannedAttr2': 'val2',
+                                'unplannedAttr1': 'val3'
+                            },
+                            Name: 'iPhone',
+                            Category: 'category',
+                            CouponCode: 'coupon',
+                            Position: 1,
+                            Price: 999,
+                            Quantity: 1,
+                            Sku: 'iphoneSKU',
+                            TotalAmount: 999,
+                            Variant: '128',
+                        },
+                        {
+                            Attributes: {
+                                'plannedAttr1': 'val1',
+                                'plannedAttr2': 'val2',
+                                'unplannedAttr1': 'val3'
+                            },
+                            Name: 'S10',
+                            Category: 'category',
+                            CouponCode: 'coupon',
+                            Position: 2,
+                            Price: 500,
+                            Quantity: 1,
+                            Sku: 'galaxySKU',
+                            TotalAmount: 500,
+                            Variant: '256',
+                        }
+                    ]
+                }
+            }
+            var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
+            var mutatedEvent = kitBlocker.mutateEventAndEventAttributes(event);
+            
+            mutatedEvent.ProductAction.ProductList[0].Attributes.should.not.have.property('unplannedAttr1');
+            mutatedEvent.ProductAction.ProductList[0].Attributes.should.have.property('plannedAttr1');
+            mutatedEvent.ProductAction.ProductList[0].Attributes.should.have.property('plannedAttr2');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Name', 'iPhone');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Category', 'category');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('CouponCode', "coupon");
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Position', 1);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Price', 999);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Quantity', 1);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Sku', 'iphoneSKU');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('TotalAmount', 999);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Variant', '128');
+
+            mutatedEvent.ProductAction.ProductList[1].Attributes.should.not.have.property('unplannedAttr1');
+            mutatedEvent.ProductAction.ProductList[1].Attributes.should.have.property('plannedAttr1');
+            mutatedEvent.ProductAction.ProductList[1].Attributes.should.have.property('plannedAttr2');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Name', 'S10');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Category', 'category');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('CouponCode', 'coupon');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Position', 2);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Price', 500);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Quantity', 1);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Sku', 'galaxySKU');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('TotalAmount', 500);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Variant', '256');
+    
+            done();
+        });
+
+        it('should mutate productAttributes if an event attribute is not planned and blok.ea = true', function(done) {
+            const event: SDKEvent = {
+                DeviceId: 'test',
+                IsFirstRun: true,
+                EventName: 'locationEvent',
+                EventCategory: Types.CommerceEventType.AddToCart,
+                MPID: testMPID, 
+                // EventAttributes: { unplannedAttr: 'test', foo: 'hi' }, //check these
+                SDKVersion: '1.0.0',
+                SessionId: 'sessionId',
+                SessionStartDate: 1,
+                Timestamp: 1,
+                EventDataType: Types.MessageType.Commerce,
+                Debug: true,
+                CurrencyCode: 'usd',
+                ProductAction: {
+                    ProductActionType: SDKProductActionType.AddToCart,
+                    ProductList: [
+                        {
+                            Attributes: {
+                                'plannedAttr1': 'val1',
+                                'plannedAttr2': 'val2',
+                                'unplannedAttr1': 'val3'
+                            },
+                            Name: 'iPhone',
+                            Category: 'category',
+                            CouponCode: 'coupon',
+                            Position: 1,
+                            Price: 999,
+                            Quantity: 1,
+                            Sku: 'iphoneSKU',
+                            TotalAmount: 999,
+                            Variant: '128',
+                        },
+                        {
+                            Attributes: {
+                                'plannedAttr1': 'val1',
+                                'plannedAttr2': 'val2',
+                                'unplannedAttr1': 'val3'
+                            },
+                            Name: 'S10',
+                            Category: 'category',
+                            CouponCode: 'coupon',
+                            Position: 2,
+                            Price: 500,
+                            Quantity: 1,
+                            Sku: 'galaxySKU',
+                            TotalAmount: 500,
+                            Variant: '256',
+                        }
+                    ]
+                }
+            }
+            var kitBlocker = new KitBlocker({document: dataPlan}, window.mParticle.getInstance());
+            var mutatedEvent = kitBlocker.mutateEventAndEventAttributes(event);
+            
+            mutatedEvent.ProductAction.ProductList[0].Attributes.should.not.have.property('unplannedAttr1');
+            mutatedEvent.ProductAction.ProductList[0].Attributes.should.have.property('plannedAttr1');
+            mutatedEvent.ProductAction.ProductList[0].Attributes.should.have.property('plannedAttr2');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Name', 'iPhone');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Category', 'category');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('CouponCode', "coupon");
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Position', 1);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Price', 999);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Quantity', 1);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Sku', 'iphoneSKU');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('TotalAmount', 999);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Variant', '128');
+
+            mutatedEvent.ProductAction.ProductList[1].Attributes.should.not.have.property('unplannedAttr1');
+            mutatedEvent.ProductAction.ProductList[1].Attributes.should.have.property('plannedAttr1');
+            mutatedEvent.ProductAction.ProductList[1].Attributes.should.have.property('plannedAttr2');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Name', 'S10');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Category', 'category');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('CouponCode', 'coupon');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Position', 2);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Price', 500);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Quantity', 1);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Sku', 'galaxySKU');
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('TotalAmount', 500);
+            mutatedEvent.ProductAction.ProductList[0].should.have.property('Variant', '256');
+    
             done();
         });
     })
