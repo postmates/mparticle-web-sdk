@@ -1947,6 +1947,7 @@ var mParticle = (function () {
         CustomEventDataCustomEventTypeEnum["userContent"] = "user_content";
         CustomEventDataCustomEventTypeEnum["userPreference"] = "user_preference";
         CustomEventDataCustomEventTypeEnum["social"] = "social";
+        CustomEventDataCustomEventTypeEnum["media"] = "media";
         CustomEventDataCustomEventTypeEnum["other"] = "other";
         CustomEventDataCustomEventTypeEnum["unknown"] = "unknown";
     })(CustomEventDataCustomEventTypeEnum = exports.CustomEventDataCustomEventTypeEnum || (exports.CustomEventDataCustomEventTypeEnum = {}));
@@ -3281,7 +3282,7 @@ var mParticle = (function () {
 
     var HTTPCodes = Constants.HTTPCodes,
         Messages = Constants.Messages;
-    function APIClient(mpInstance) {
+    function APIClient(mpInstance, kitBlocker) {
       this.uploader = null;
       var self = this;
 
@@ -3369,7 +3370,13 @@ var mParticle = (function () {
         }
 
         if (event && event.EventName !== Types.MessageType.AppStateTransition) {
-          mpInstance._Forwarders.sendEventToForwarders(event);
+          if (kitBlocker) {
+            event = kitBlocker.createBlockedEvent(event);
+          }
+
+          if (event) {
+            mpInstance._Forwarders.sendEventToForwarders(event);
+          }
         }
       };
 
@@ -7000,7 +7007,7 @@ var mParticle = (function () {
       };
     }
 
-    function Forwarders(mpInstance) {
+    function Forwarders(mpInstance, kitBlocker) {
       var self = this;
 
       this.initForwarders = function (userIdentities, forwardingStatsCallback) {
@@ -7288,6 +7295,10 @@ var mParticle = (function () {
       };
 
       this.callSetUserAttributeOnForwarders = function (key, value) {
+        if (kitBlocker.isAttributeKeyBlocked(key)) {
+          return;
+        }
+
         if (mpInstance._Store.activeForwarders.length) {
           mpInstance._Store.activeForwarders.forEach(function (forwarder) {
             if (forwarder.setUserAttribute && forwarder.userAttributeFilters && !mpInstance._Helpers.inArray(forwarder.userAttributeFilters, mpInstance._Helpers.generateHash(key))) {
@@ -9412,6 +9423,432 @@ var mParticle = (function () {
       };
     }
 
+    /*
+        TODO: Including this as a workaround because attempting to import it from
+        @mparticle/data-planning-models directly creates a build error.
+     */
+    var DataPlanMatchType = {
+        ScreenView: "screen_view",
+        CustomEvent: "custom_event",
+        Commerce: "commerce",
+        UserAttributes: "user_attributes",
+        UserIdentities: "user_identities",
+        ProductAction: "product_action",
+        PromotionAction: "promotion_action",
+        ProductImpression: "product_impression"
+    };
+    /*
+        inspiration from https://github.com/mParticle/data-planning-node/blob/master/src/data_planning/data_plan_event_validator.ts
+        but modified to only include commerce events, custom events, screen views, and removes validation
+
+        The purpose of the KitBlocker class is to parse a data plan and determine what events, event/user/product attributes, and user identities should be blocked from downstream forwarders.
+
+        KitBlocker is instantiated with a data plan on mParticle initialization. KitBlocker.kitBlockingEnabled is false if no data plan is passed.
+        It parses the data plan by creating a `dataPlanMatchLookups` object in the following manner:
+            1. For all events and user attributes/identities, it generates a `matchKey` in the shape of `typeOfEvent:eventType:nameOfEvent`
+                a. The matchKeys' value will return `true` if additionalProperties for the custom attributes/identities is `true`, otherwise it will return an object of planned attribute/identities
+            2. For commerce events, after step 1 and 1a, a second `matchKey` is included that appends `Products`. This is used to determine productAttributes blocked
+        
+        When an event is logged in mParticle, it is sent to our server and then calls `KitBlocker.createBlockedEvent` before passing the event to each forwarder.
+        If the event is blocked, it will not send to the forwarder. If the event is not blocked, event/user/product attributes and user identities will be removed/mutated if blocked.
+    */
+    var KitBlocker = /*#__PURE__*/ function () {
+        function KitBlocker(dataPlan, mpInstance) {
+            var _dataPlan$document, _dataPlan$document$dt, _dataPlan$document2, _dataPlan$document2$d, _dataPlan$document2$d2, _dataPlan$document3, _dataPlan$document3$d, _dataPlan$document3$d2, _dataPlan$document4, _dataPlan$document4$d, _dataPlan$document4$d2, _dataPlan$document5, _dataPlan$document5$d, _dataPlan$document5$d2, _dataPlan$document6, _dataPlan$document6$d, _dataPlan$document6$d2, _dataPlan$document6$d3, _this = this;
+            classCallCheck(this, KitBlocker);
+            defineProperty(this, "dataPlanMatchLookups", {});
+            defineProperty(this, "blockEvents", false);
+            defineProperty(this, "blockEventAttributes", false);
+            defineProperty(this, "blockUserAttributes", false);
+            defineProperty(this, "blockUserIdentities", false);
+            defineProperty(this, "kitBlockingEnabled", false);
+            defineProperty(this, "mpInstance", void 0);
+            this.mpInstance = mpInstance;
+            this.kitBlockingEnabled = Boolean(dataPlan === null || dataPlan === void 0 ? void 0 : (_dataPlan$document = dataPlan.document) === null || _dataPlan$document === void 0 ? void 0 : (_dataPlan$document$dt = _dataPlan$document.dtpn) === null || _dataPlan$document$dt === void 0 ? void 0 : _dataPlan$document$dt.blok);
+            this.blockEvents = dataPlan === null || dataPlan === void 0 ? void 0 : (_dataPlan$document2 = dataPlan.document) === null || _dataPlan$document2 === void 0 ? void 0 : (_dataPlan$document2$d = _dataPlan$document2.dtpn) === null || _dataPlan$document2$d === void 0 ? void 0 : (_dataPlan$document2$d2 = _dataPlan$document2$d.blok) === null || _dataPlan$document2$d2 === void 0 ? void 0 : _dataPlan$document2$d2.ev;
+            this.blockEventAttributes = dataPlan === null || dataPlan === void 0 ? void 0 : (_dataPlan$document3 = dataPlan.document) === null || _dataPlan$document3 === void 0 ? void 0 : (_dataPlan$document3$d = _dataPlan$document3.dtpn) === null || _dataPlan$document3$d === void 0 ? void 0 : (_dataPlan$document3$d2 = _dataPlan$document3$d.blok) === null || _dataPlan$document3$d2 === void 0 ? void 0 : _dataPlan$document3$d2.ea;
+            this.blockUserAttributes = dataPlan === null || dataPlan === void 0 ? void 0 : (_dataPlan$document4 = dataPlan.document) === null || _dataPlan$document4 === void 0 ? void 0 : (_dataPlan$document4$d = _dataPlan$document4.dtpn) === null || _dataPlan$document4$d === void 0 ? void 0 : (_dataPlan$document4$d2 = _dataPlan$document4$d.blok) === null || _dataPlan$document4$d2 === void 0 ? void 0 : _dataPlan$document4$d2.ua;
+            this.blockUserIdentities = dataPlan === null || dataPlan === void 0 ? void 0 : (_dataPlan$document5 = dataPlan.document) === null || _dataPlan$document5 === void 0 ? void 0 : (_dataPlan$document5$d = _dataPlan$document5.dtpn) === null || _dataPlan$document5$d === void 0 ? void 0 : (_dataPlan$document5$d2 = _dataPlan$document5$d.blok) === null || _dataPlan$document5$d2 === void 0 ? void 0 : _dataPlan$document5$d2.ui;
+            var dataPoints = dataPlan === null || dataPlan === void 0 ? void 0 : (_dataPlan$document6 = dataPlan.document) === null || _dataPlan$document6 === void 0 ? void 0 : (_dataPlan$document6$d = _dataPlan$document6.dtpn) === null || _dataPlan$document6$d === void 0 ? void 0 : (_dataPlan$document6$d2 = _dataPlan$document6$d.vers) === null || _dataPlan$document6$d2 === void 0 ? void 0 : (_dataPlan$document6$d3 = _dataPlan$document6$d2.version_document) === null || _dataPlan$document6$d3 === void 0 ? void 0 : _dataPlan$document6$d3.data_points;
+            if (dataPlan) {
+                if (dataPoints && dataPoints.length > 0) {
+                    dataPoints.forEach(function (point) {
+                        return _this.addToMatchLookups(point);
+                    });
+                }
+                else {
+                    this.mpInstance.Logger.error('There was an issue with the data plan');
+                    return;
+                }
+            }
+        }
+        createClass(KitBlocker, [{
+                key: "addToMatchLookups",
+                value: function addToMatchLookups(point) {
+                    if (!point.match || !point.validator) {
+                        this.mpInstance.Logger.warning("Data Plan Point is not valid' + ".concat(point));
+                        return;
+                    } // match keys for non product custom attribute related data poins
+                    var matchKey = this.generateMatchKey(point.match);
+                    var properties = this.getEventProperties(point.match.type, point.validator);
+                    this.dataPlanMatchLookups[matchKey] = properties; // match keys for product custom attribute related data poins
+                    if (point.match.type === DataPlanMatchType.ProductImpression || point.match.type === DataPlanMatchType.ProductAction || point.match.type === DataPlanMatchType.PromotionAction) {
+                        matchKey = this.generateProductAttributeMatchKey(point.match);
+                        properties = this.getProductProperties(point.match.type, point.validator);
+                        this.dataPlanMatchLookups[matchKey] = properties;
+                    }
+                }
+            }, {
+                key: "generateMatchKey",
+                value: function generateMatchKey(match) {
+                    switch (match.type) {
+                        case DataPlanMatchType.CustomEvent:
+                            var customEventCriteria = match.criteria;
+                            return [DataPlanMatchType.CustomEvent, customEventCriteria.custom_event_type, customEventCriteria.event_name].join(':');
+                        case DataPlanMatchType.ScreenView:
+                            var screenViewCriteria = match.criteria;
+                            return [DataPlanMatchType.ScreenView, '', screenViewCriteria.screen_name].join(':');
+                        case DataPlanMatchType.ProductAction:
+                            var productActionMatch = match.criteria;
+                            return [match.type, productActionMatch.action].join(':');
+                        case DataPlanMatchType.PromotionAction:
+                            var promoActionMatch = match.criteria;
+                            return [match.type, promoActionMatch.action].join(':');
+                        case DataPlanMatchType.ProductImpression:
+                            var productImpressionActionMatch = match.criteria;
+                            return [match.type, productImpressionActionMatch.action].join(':');
+                        case DataPlanMatchType.UserIdentities:
+                        case DataPlanMatchType.UserAttributes:
+                            return [match.type].join(':');
+                        default:
+                            return null;
+                    }
+                }
+            }, {
+                key: "generateProductAttributeMatchKey",
+                value: function generateProductAttributeMatchKey(match) {
+                    switch (match.type) {
+                        case DataPlanMatchType.ProductAction:
+                            var productActionMatch = match.criteria;
+                            return [match.type, productActionMatch.action, 'ProductAttributes'].join(':');
+                        case DataPlanMatchType.PromotionAction:
+                            var promoActionMatch = match.criteria;
+                            return [match.type, promoActionMatch.action, 'ProductAttributes'].join(':');
+                        case DataPlanMatchType.ProductImpression:
+                            var productImpressionActionMatch = match.criteria;
+                            return [match.type, productImpressionActionMatch.action, 'ProductAttributes'].join(':');
+                        default:
+                            return null;
+                    }
+                }
+            }, {
+                key: "getEventProperties",
+                value: function getEventProperties(type, validator) {
+                    var _validator$definition, _validator$definition2, _validator$definition3, _validator$definition4, _validator$definition5;
+                    var customAttributes;
+                    var userAdditionalProperties;
+                    switch (type) {
+                        case DataPlanMatchType.CustomEvent:
+                        case DataPlanMatchType.ScreenView:
+                        case DataPlanMatchType.ProductAction:
+                        case DataPlanMatchType.PromotionAction:
+                        case DataPlanMatchType.ProductImpression:
+                            customAttributes = validator === null || validator === void 0 ? void 0 : (_validator$definition = validator.definition) === null || _validator$definition === void 0 ? void 0 : (_validator$definition2 = _validator$definition.properties) === null || _validator$definition2 === void 0 ? void 0 : (_validator$definition3 = _validator$definition2.data) === null || _validator$definition3 === void 0 ? void 0 : (_validator$definition4 = _validator$definition3.properties) === null || _validator$definition4 === void 0 ? void 0 : _validator$definition4.custom_attributes;
+                            if (customAttributes) {
+                                if (customAttributes.additionalProperties) {
+                                    return true;
+                                }
+                                else {
+                                    var properties = {};
+                                    for (var property in customAttributes.properties) {
+                                        properties[property] = true;
+                                    }
+                                    return properties;
+                                }
+                            }
+                            else {
+                                return true;
+                            }
+                        case DataPlanMatchType.UserAttributes:
+                        case DataPlanMatchType.UserIdentities:
+                            userAdditionalProperties = validator === null || validator === void 0 ? void 0 : (_validator$definition5 = validator.definition) === null || _validator$definition5 === void 0 ? void 0 : _validator$definition5.additionalProperties;
+                            if (userAdditionalProperties) {
+                                return true;
+                            }
+                            else {
+                                var _properties = {};
+                                var userProperties = validator.definition.properties;
+                                for (var _property in userProperties) {
+                                    _properties[_property] = true;
+                                }
+                                return _properties;
+                            }
+                        default:
+                            return null;
+                    }
+                }
+            }, {
+                key: "getProductProperties",
+                value: function getProductProperties(type, validator) {
+                    var _validator$definition6, _validator$definition7, _validator$definition8, _validator$definition9, _validator$definition10, _validator$definition11, _validator$definition12, _validator$definition13, _validator$definition14;
+                    var productCustomAttributes;
+                    switch (type) {
+                        case DataPlanMatchType.ProductAction:
+                        case DataPlanMatchType.PromotionAction:
+                        case DataPlanMatchType.ProductImpression:
+                            //product transaction attributes
+                            productCustomAttributes = validator === null || validator === void 0 ? void 0 : (_validator$definition6 = validator.definition) === null || _validator$definition6 === void 0 ? void 0 : (_validator$definition7 = _validator$definition6.properties) === null || _validator$definition7 === void 0 ? void 0 : (_validator$definition8 = _validator$definition7.data) === null || _validator$definition8 === void 0 ? void 0 : (_validator$definition9 = _validator$definition8.properties) === null || _validator$definition9 === void 0 ? void 0 : (_validator$definition10 = _validator$definition9.product_action) === null || _validator$definition10 === void 0 ? void 0 : (_validator$definition11 = _validator$definition10.properties) === null || _validator$definition11 === void 0 ? void 0 : (_validator$definition12 = _validator$definition11.products) === null || _validator$definition12 === void 0 ? void 0 : (_validator$definition13 = _validator$definition12.items) === null || _validator$definition13 === void 0 ? void 0 : (_validator$definition14 = _validator$definition13.properties) === null || _validator$definition14 === void 0 ? void 0 : _validator$definition14.custom_attributes; //product item attributes
+                            if (productCustomAttributes) {
+                                if (productCustomAttributes.additionalProperties) {
+                                    return true;
+                                }
+                                else {
+                                    var properties = {};
+                                    for (var property in (_productCustomAttribu = productCustomAttributes) === null || _productCustomAttribu === void 0 ? void 0 : _productCustomAttribu.properties) {
+                                        var _productCustomAttribu;
+                                        properties[property] = true;
+                                    }
+                                    return properties;
+                                }
+                            }
+                            else {
+                                return true;
+                            }
+                        default:
+                            return null;
+                    }
+                }
+            }, {
+                key: "getMatchKey",
+                value: function getMatchKey(eventToMatch) {
+                    switch (eventToMatch.event_type) {
+                        case dist_14.screenView:
+                            var screenViewEvent = eventToMatch;
+                            if (screenViewEvent.data) {
+                                return [DataPlanMatchType.ScreenView, 'screen_view', '', screenViewEvent.data.screen_name].join(':');
+                            }
+                            return null;
+                        case dist_14.commerceEvent:
+                            var commerceEvent = eventToMatch;
+                            var matchKey = [];
+                            if (commerceEvent && commerceEvent.data) {
+                                var _commerceEvent$data = commerceEvent.data, product_action = _commerceEvent$data.product_action, product_impressions = _commerceEvent$data.product_impressions, promotion_action = _commerceEvent$data.promotion_action;
+                                if (product_action) {
+                                    matchKey.push(DataPlanMatchType.ProductAction);
+                                    matchKey.push(product_action.action);
+                                }
+                                else if (promotion_action) {
+                                    matchKey.push(DataPlanMatchType.PromotionAction);
+                                    matchKey.push(promotion_action.action);
+                                }
+                                else if (product_impressions) {
+                                    matchKey.push(DataPlanMatchType.ProductImpression);
+                                }
+                            }
+                            return matchKey.join(':');
+                        case dist_14.customEvent:
+                            var customEvent = eventToMatch;
+                            if (customEvent.data) {
+                                return ['custom_event', customEvent.data.custom_event_type, customEvent.data.event_name].join(':');
+                            }
+                            return null;
+                        default:
+                            return null;
+                    }
+                }
+            }, {
+                key: "getProductAttributeMatchKey",
+                value: function getProductAttributeMatchKey(eventToMatch) {
+                    switch (eventToMatch.event_type) {
+                        case dist_14.commerceEvent:
+                            var commerceEvent = eventToMatch;
+                            var matchKey = [];
+                            var _commerceEvent$data2 = commerceEvent.data, product_action = _commerceEvent$data2.product_action, product_impressions = _commerceEvent$data2.product_impressions, promotion_action = _commerceEvent$data2.promotion_action;
+                            if (product_action) {
+                                matchKey.push(DataPlanMatchType.ProductAction);
+                                matchKey.push(product_action.action);
+                                matchKey.push('ProductAttributes');
+                            }
+                            else if (promotion_action) {
+                                matchKey.push(DataPlanMatchType.PromotionAction);
+                                matchKey.push(promotion_action.action);
+                                matchKey.push('ProductAttributes');
+                            }
+                            else if (product_impressions) {
+                                matchKey.push(DataPlanMatchType.ProductImpression);
+                                matchKey.push('ProductAttributes');
+                            }
+                            return matchKey.join(':');
+                        default:
+                            return null;
+                    }
+                }
+            }, {
+                key: "createBlockedEvent",
+                value: function createBlockedEvent(event) {
+                    // mutate the event/event attributes, then the user attributes, then the user identities
+                    if (event) {
+                        event = this.mutateEventAndEventAttributes(event);
+                    }
+                    if (event && event.EventDataType === Types.MessageType.Commerce) {
+                        event = this.mutateProductAttributes(event);
+                    }
+                    if (event) {
+                        event = this.mutateUserAttributes(event);
+                        event = this.mutateUserIdentities(event);
+                    }
+                    return event;
+                }
+            }, {
+                key: "mutateEventAndEventAttributes",
+                value: function mutateEventAndEventAttributes(event) {
+                    var baseEvent = convertEvent(event);
+                    var matchKey = this.getMatchKey(baseEvent);
+                    var matchedEvent = this.dataPlanMatchLookups[matchKey];
+                    if (this.blockEvents) {
+                        /*
+                            If the event is not planned, it doesn't exist in dataPlanMatchLookups
+                            and should be blocked (return null to not send anything to forwarders)
+                        */
+                        if (!matchedEvent) {
+                            return null;
+                        }
+                    }
+                    if (this.blockEventAttributes) {
+                        /*
+                            matchedEvent is set to `true` if additionalProperties is `true`
+                            otherwise, delete attributes that exist on event.EventAttributes
+                            that aren't on
+                        */
+                        if (matchedEvent === true) {
+                            return event;
+                        }
+                        if (matchedEvent) {
+                            for (var _key in event.EventAttributes) {
+                                if (!matchedEvent[_key]) {
+                                    delete event.EventAttributes[_key];
+                                }
+                            }
+                            return event;
+                        }
+                        else {
+                            return event;
+                        }
+                    }
+                    return event;
+                }
+            }, {
+                key: "mutateProductAttributes",
+                value: function mutateProductAttributes(event) {
+                    var baseEvent = convertEvent(event);
+                    var matchKey = this.getProductAttributeMatchKey(baseEvent);
+                    var matchedEvent = this.dataPlanMatchLookups[matchKey];
+                    if (this.blockEvents) {
+                        /*
+                            If the event is not planned, it doesn't exist in dataPlanMatchLookups
+                            and should be blocked (return null to not send anything to forwarders)
+                        */
+                        if (!matchedEvent) {
+                            return null;
+                        }
+                    }
+                    if (this.blockEventAttributes) {
+                        /*
+                            matchedEvent is set to `true` if additionalProperties is `true`
+                            otherwise, delete attributes that exist on event.EventAttributes
+                            that aren't on
+                        */
+                        if (matchedEvent === true) {
+                            return event;
+                        }
+                        if (matchedEvent) {
+                            var _event$ProductAction, _event$ProductAction$;
+                            (_event$ProductAction = event.ProductAction) === null || _event$ProductAction === void 0 ? void 0 : (_event$ProductAction$ = _event$ProductAction.ProductList) === null || _event$ProductAction$ === void 0 ? void 0 : _event$ProductAction$.forEach(function (product) {
+                                for (var productKey in product.Attributes) {
+                                    if (!matchedEvent[productKey]) {
+                                        delete product.Attributes[productKey];
+                                    }
+                                }
+                            });
+                            return event;
+                        }
+                        else {
+                            return event;
+                        }
+                    }
+                    return event;
+                }
+            }, {
+                key: "mutateUserAttributes",
+                value: function mutateUserAttributes(event) {
+                    if (this.blockUserAttributes) {
+                        /*
+                            If the user attribute is not found in the matchedAttributes
+                            then remove it from event.UserAttributes as it is blocked
+                        */
+                        var matchedAttributes = this.dataPlanMatchLookups['user_attributes'];
+                        if (this.mpInstance._Helpers.isObject(matchedAttributes)) {
+                            for (var ua in event.UserAttributes) {
+                                if (!matchedAttributes[ua]) {
+                                    delete event.UserAttributes[ua];
+                                }
+                            }
+                        }
+                    }
+                    return event;
+                }
+            }, {
+                key: "isAttributeKeyBlocked",
+                value: function isAttributeKeyBlocked(key) {
+                    /* used when an attribute is added to the user */
+                    if (!this.kitBlockingEnabled) {
+                        return false;
+                    }
+                    if (this.blockUserAttributes) {
+                        var matchedAttributes = this.dataPlanMatchLookups['user_attributes'];
+                        if (matchedAttributes === true) {
+                            return false;
+                        }
+                        if (!matchedAttributes[key]) {
+                            return true;
+                        }
+                    }
+                    else {
+                        return false;
+                    }
+                    return false;
+                }
+            }, {
+                key: "mutateUserIdentities",
+                value: function mutateUserIdentities(event) {
+                    var _this2 = this;
+                    /*
+                        If the user identity is not found in matchedIdentities
+                        then remove it from event.UserIdentities as it is blocked.
+                        event.UserIdentities is of type [{Identity: 'id1', Type: 7}, ...]
+                        and so to compare properly in matchedIdentities, each Type needs
+                        to be converted to an identityName
+                    */
+                    if (this.blockUserIdentities) {
+                        var matchedIdentities = this.dataPlanMatchLookups['user_identities'];
+                        if (this.mpInstance._Helpers.isObject(matchedIdentities)) {
+                            var _event$UserIdentities;
+                            if (event === null || event === void 0 ? void 0 : (_event$UserIdentities = event.UserIdentities) === null || _event$UserIdentities === void 0 ? void 0 : _event$UserIdentities.length) {
+                                event.UserIdentities.forEach(function (uiByType, i) {
+                                    var identityName = Types.IdentityType.getIdentityName(_this2.mpInstance._Helpers.parseNumber(uiByType.Type));
+                                    if (!matchedIdentities[identityName]) {
+                                        event.UserIdentities.splice(i, 1);
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    return event;
+                }
+            }]);
+        return KitBlocker;
+    }();
+
     var Messages$8 = Constants.Messages,
         HTTPCodes$2 = Constants.HTTPCodes;
     /**
@@ -9436,8 +9873,6 @@ var mParticle = (function () {
       this._SessionManager = new SessionManager(this);
       this._Persistence = new _Persistence(this);
       this._Helpers = new Helpers(this);
-      this._Forwarders = new Forwarders(this);
-      this._APIClient = new APIClient(this);
       this._Events = new Events(this);
       this._CookieSyncManager = new cookieSyncManager(this);
       this._ServerModel = new ServerModel(this);
@@ -9467,11 +9902,16 @@ var mParticle = (function () {
       }
 
       this.init = function (apiKey, config) {
+        var kitBlocker;
+
         if (!config) {
           window.console.warn('You did not pass a config object to init(). mParticle will not initialize properly');
         }
 
-        runPreConfigFetchInitialization(this, apiKey, config); // config code - Fetch config when requestConfig = true, otherwise, proceed with SDKInitialization
+        runPreConfigFetchInitialization(this, apiKey, config);
+        kitBlocker = new KitBlocker(config.dataPlan, this);
+        this._APIClient = new APIClient(this, kitBlocker);
+        this._Forwarders = new Forwarders(this, kitBlocker); // config code - Fetch config when requestConfig = true, otherwise, proceed with SDKInitialization
         // Since fetching the configuration is asynchronous, we must pass completeSDKInitialization
         // to it for it to be run after fetched
 
